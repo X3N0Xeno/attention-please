@@ -1,0 +1,126 @@
+/* Smooth transition for masked elements */
+ytd-thumbnail img,
+yt-thumbnail-view-model img,
+#thumbnail img,
+yt-avatar-shape img,
+#avatar img,
+yt-img-shadow img {
+  transition: opacity 0.3s ease !important;
+}
+
+/* 1. Hide ONLY Video Card Text, Channel Names, Watch Metadata, and Sidebar Channel/Item Names
+      (Leaves Top Header/Premium, Filter Chips, Sidebar Section Headers, and Video Durations untouched) */
+html.ap-mystery-on ytd-rich-item-renderer *:not(yt-thumbnail-bottom-overlay-view-model):not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape):not(badge-shape *):not(.badge-shape-wiz):not(.badge-shape-wiz *),
+html.ap-mystery-on ytd-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on ytd-compact-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on yt-lockup-view-model *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on ytm-shorts-lockup-view-model *,
+html.ap-mystery-on ytd-reel-item-renderer *,
+html.ap-mystery-on ytd-watch-metadata *,
+html.ap-mystery-on #secondary ytd-playlist-panel-video-renderer *,
+html.ap-mystery-on ytd-guide-entry-renderer yt-formatted-string.title,
+html.ap-mystery-on ytd-mini-guide-entry-renderer span.title {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  user-select: none !important;
+}
+
+/* 2. Explicitly Force Video Duration Badges to Stay Crisp White */
+html.ap-mystery-on yt-thumbnail-bottom-overlay-view-model,
+html.ap-mystery-on yt-thumbnail-bottom-overlay-view-model *,
+html.ap-mystery-on yt-thumbnail-overlay-badge-view-model,
+html.ap-mystery-on yt-thumbnail-overlay-badge-view-model *,
+html.ap-mystery-on ytd-thumbnail-overlay-time-status-renderer,
+html.ap-mystery-on ytd-thumbnail-overlay-time-status-renderer *,
+html.ap-mystery-on badge-shape,
+html.ap-mystery-on badge-shape *,
+html.ap-mystery-on .badge-shape-wiz,
+html.ap-mystery-on .badge-shape-wiz * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
+}
+html.ap-mystery-on ytd-guide-collapsible-section-entry-renderer > ytd-guide-entry-renderer yt-formatted-string.title,
+html.ap-mystery-on #header-entry yt-formatted-string.title {
+  color: #f1f1f1 !important;
+  -webkit-text-fill-color: #f1f1f1 !important;
+}
+
+/* 3. Thumbnails & Creator Avatars -> Native Unloaded Grey Placeholders
+      (Scoped to feed/watch cards so top header profile icon & YouTube logo stay visible) */
+html.ap-mystery-on ytd-browse ytd-thumbnail img,
+html.ap-mystery-on ytd-browse yt-thumbnail-view-model img,
+html.ap-mystery-on ytd-browse #thumbnail img,
+html.ap-mystery-on ytd-browse yt-avatar-shape img,
+html.ap-mystery-on ytd-browse #avatar img,
+html.ap-mystery-on ytd-watch-flexy ytd-thumbnail img,
+html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model img,
+html.ap-mystery-on ytd-watch-flexy #thumbnail img,
+html.ap-mystery-on ytd-watch-flexy yt-avatar-shape img,
+html.ap-mystery-on ytd-watch-flexy #avatar img,
+html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow img {
+  opacity: 0 !important;
+}
+
+html.ap-mystery-on ytd-browse ytd-thumbnail,
+html.ap-mystery-on ytd-browse yt-thumbnail-view-model,
+html.ap-mystery-on ytd-browse a#thumbnail,
+html.ap-mystery-on ytd-watch-flexy ytd-thumbnail,
+html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model,
+html.ap-mystery-on ytd-watch-flexy a#thumbnail {
+  background-color: #272727 !important;
+  border-radius: 12px !important;
+}
+
+html.ap-mystery-on ytd-browse yt-avatar-shape,
+html.ap-mystery-on ytd-browse #avatar,
+html.ap-mystery-on ytd-watch-flexy yt-avatar-shape,
+html.ap-mystery-on ytd-watch-flexy #avatar,
+html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow {
+  background-color: #272727 !important;
+  border-radius: 50% !important;
+}
+
+/* 4. Disable Hover Video Previews & Inline Players */
+html.ap-mystery-on #mouseover-overlay,
+html.ap-mystery-on #hover-overlays,
+html.ap-mystery-on ytd-moving-thumbnail-renderer,
+html.ap-mystery-on ytd-video-preview,
+html.ap-mystery-on #inline-preview-player {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* 5. Satisfying Wipe / Wave Effect Overlay */
+#ap-wipe-wave {
+  position: fixed;
+  top: 0;
+  left: -120%;
+  width: 120%;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999998;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.04) 60%,
+    transparent 100%
+  );
+  backdrop-filter: blur(4px);
+}
+
+#ap-wipe-wave.animate {
+  animation: apWipeSweep 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes apWipeSweep {
+  0% {
+    left: -120%;
+  }
+  100% {
+    left: 120%;
+  }
+}

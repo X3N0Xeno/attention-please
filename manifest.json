@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Attention, please!",
+  "version": "0.1.0",
+  "description": "You clicked it. Now live with it.",
+  "permissions": ["storage"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "attention-please@malfunction.hackathon"
+    }
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Attention, please!"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "css": ["styles.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
