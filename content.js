@@ -37,7 +37,7 @@
         const commitment = window.AP_State.getCommitment();
         if (commitment) {
           const finishedId = commitment.activeVideoId;
-          const videoMeta = window.AP_State.scrapeCurrentVideoMetadata();
+          const videoMeta = window.AP_State.getCachedVideoContext();
           window.AP_State.releaseCurrentCommitment(finishedId);
           window.AP_Modals.showNutritionFacts(videoMeta, finishedId);
         }

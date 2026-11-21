@@ -3,6 +3,8 @@
   let ignoreNextStorageSync = false;
   let commitment = null;
   let lastReleasedVideoId = null;
+  let cachedVideoContext = null;
+  let cachingForVideoId = null;
 
   function createDefaultControls() {
     return {
@@ -52,12 +54,61 @@
 
   function releaseCurrentCommitment(videoIdToExclude) {
     commitment = null;
+    cachedVideoContext = null;
+    cachingForVideoId = null;
     lastReleasedVideoId = videoIdToExclude || null;
     window.AP_Modals?.close();
     saveState({
       commitmentState: null,
       lastReleasedVideoId
     });
+  }
+
+  function ensureVideoContextCached(videoId) {
+    if (!videoId) return;
+    if (cachedVideoContext?.videoId === videoId || cachingForVideoId === videoId) return;
+    cachingForVideoId = videoId;
+    const scrape = typeof getVideoContext === 'function'
+      ? getVideoContext()
+      : Promise.resolve({
+          videoId,
+          title: document.title.replace(/\s*-\s*YouTube\s*$/, '').trim(),
+          channel: 'Unknown Creator',
+          description: '',
+          comments: []
+        });
+    scrape.then((ctx) => {
+      if (cachingForVideoId !== videoId) return;
+      const duration = (document.querySelector('.ytp-time-duration')?.textContent || '0:00').trim();
+      cachedVideoContext = {
+        videoId: ctx.videoId || videoId,
+        title: ctx.title || document.title.replace(/\s*-\s*YouTube\s*$/, '').trim(),
+        channel: ctx.channel || 'Unknown Creator',
+        description: ctx.description || '',
+        comments: Array.isArray(ctx.comments) ? ctx.comments : [],
+        duration
+      };
+    }).catch(() => {
+      if (cachingForVideoId === videoId) cachingForVideoId = null;
+    });
+  }
+
+  function getCachedVideoContext() {
+    const duration = (document.querySelector('.ytp-time-duration')?.textContent || '').trim();
+    if (cachedVideoContext) {
+      if (duration && (!cachedVideoContext.duration || cachedVideoContext.duration === '0:00')) {
+        cachedVideoContext.duration = duration;
+      }
+      return { ...cachedVideoContext };
+    }
+    return {
+      videoId: getVideoIdFromUrl(location.href) || '',
+      title: document.title.replace(/\s*-\s*YouTube\s*$/, '').trim(),
+      channel: 'Unknown Creator',
+      description: '',
+      comments: [],
+      duration: duration || '0:00'
+    };
   }
 
   function enforceCommitmentOnRoute() {
@@ -72,6 +123,8 @@
     if (commitment && commitment.activeVideoId) {
       if (currentVideoId !== commitment.activeVideoId) {
         location.replace(`https://www.youtube.com/watch?v=${commitment.activeVideoId}`);
+      } else {
+        ensureVideoContextCached(commitment.activeVideoId);
       }
       return;
     }
@@ -86,27 +139,8 @@
         controls: createDefaultControls()
       };
       saveState({ commitmentState: commitment });
+      ensureVideoContextCached(currentVideoId);
     }
-  }
-
-  function scrapeCurrentVideoMetadata() {
-    const titleEl =
-      document.querySelector('ytd-watch-metadata h1 yt-formatted-string') ||
-      document.querySelector('meta[name="title"]');
-    const channelEl =
-      document.querySelector('ytd-watch-metadata #channel-name a') ||
-      document.querySelector('link[itemprop="name"]');
-    const descEl =
-      document.querySelector('ytd-watch-metadata #description-inline-expander') ||
-      document.querySelector('meta[name="description"]');
-    const durationEl = document.querySelector('.ytp-time-duration');
-
-    return {
-      title: (titleEl?.textContent || titleEl?.getAttribute('content') || document.title.replace(' - YouTube', '')).trim(),
-      channel: (channelEl?.textContent || channelEl?.getAttribute('content') || 'Unknown Creator').trim(),
-      description: (descEl?.textContent || descEl?.getAttribute('content') || '').trim().slice(0, 300),
-      duration: (durationEl?.textContent || '0:00').trim()
-    };
   }
 
   function init(onVisualChange) {
@@ -156,6 +190,6 @@
     saveCommitment: () => saveState({ commitmentState: commitment }),
     releaseCurrentCommitment,
     enforceCommitmentOnRoute,
-    scrapeCurrentVideoMetadata
+    getCachedVideoContext
   };
 })();
