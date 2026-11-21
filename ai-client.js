@@ -274,7 +274,7 @@ Respond with ONLY this JSON:
 {
  "caloriesWasted": integer 0-2000,
  "brainrotPercent": integer 0-100,
- "attentionDamage": "short phrase, max 8 words",
+ "attentionDamage": "severity rating, 1-3 words (e.g. Minimal, Mild, Moderate, Severe, Critical, Terminal)",
  "emotionalAftertaste": "short phrase, max 8 words",
  "verdict": "one sentence, max 20 words"
 }
@@ -291,7 +291,7 @@ async function generateNutrition(context = {}) {
   const fallback = {
     caloriesWasted: 420,
     brainrotPercent: 69,
-    attentionDamage: "Moderate, with lingering scrolling",
+    attentionDamage: "Moderate",
     emotionalAftertaste: "Mild regret, hint of curiosity",
     verdict: "Technically a video. Consume responsibly, or don't.",
   };

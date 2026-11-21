@@ -235,7 +235,7 @@ async function runUnitChecks() {
       assert.strictEqual(label.source, "gemini");
       assert.strictEqual(label.caloriesWasted, 2000);
       assert.strictEqual(label.brainrotPercent, 0);
-      assert.strictEqual(label.attentionDamage, "Moderate, with lingering scrolling");
+      assert.strictEqual(label.attentionDamage, "Moderate");
       assert.strictEqual(label.emotionalAftertaste, "Salty");
       assert.strictEqual(label.verdict.length, 200);
     }
