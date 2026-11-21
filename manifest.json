@@ -4,6 +4,11 @@
   "version": "0.1.0",
   "description": "You clicked it. Now live with it.",
   "permissions": ["storage"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["config.js", "ai-client.js", "background.js"]
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "attention-please@malfunction.hackathon"
@@ -17,7 +22,7 @@
     {
       "matches": ["*://*.youtube.com/*"],
       "css": ["styles.css"],
-      "js": ["content.js"],
+      "js": ["video-context.js", "content.js"],
       "run_at": "document_idle"
     }
   ]
