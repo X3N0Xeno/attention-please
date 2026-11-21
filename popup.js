@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isQualifying,
         stage: 1,
         reply: isQualifying
-          ? 'Escape request logged. Early termination requires stronger justification.'
-          : 'Access denied. You committed to this video. State why you deserve early release.'
+          ? "Mmm, asking so politely to leave already, baby? Keep talking sweet to me."
+          : "Excuse me? You committed to this video, sweetheart. Ask Mommy properly if you want out."
       };
     }
 
