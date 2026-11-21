@@ -54,6 +54,11 @@
     saveCommitment: () => window.AP_State.saveCommitment(),
     getLastActionTs: () => lastActionTimestamp,
     setLastActionTs: (ts) => { lastActionTimestamp = ts; },
+    clampSeekToHalfway: (vid) => {
+      if (vid && Number.isFinite(vid.duration) && vid.duration > 0 && vid.currentTime > vid.duration * 0.5) {
+        vid.currentTime = vid.duration * 0.5;
+      }
+    },
     isUserTyping
   };
 })();
