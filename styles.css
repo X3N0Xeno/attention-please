@@ -8,12 +8,13 @@ yt-img-shadow img {
   transition: opacity 0.3s ease !important;
 }
 
-/* 1. Hide ONLY Video Card Text, Channel Names, Watch Metadata, and Sidebar Channel/Item Names
-      (Leaves Top Header/Premium, Filter Chips, Sidebar Section Headers, and Video Durations untouched) */
+/* 1. Hide Video Card Text, Channel Results, Ads, Watch Metadata, and Sidebar Names */
 html.ap-mystery-on ytd-rich-item-renderer *:not(yt-thumbnail-bottom-overlay-view-model):not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape):not(badge-shape *):not(.badge-shape-wiz):not(.badge-shape-wiz *),
 html.ap-mystery-on ytd-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
 html.ap-mystery-on ytd-compact-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
 html.ap-mystery-on yt-lockup-view-model *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on ytd-channel-renderer *,
+html.ap-mystery-on ytd-ad-slot-renderer *,
 html.ap-mystery-on ytm-shorts-lockup-view-model *,
 html.ap-mystery-on ytd-reel-item-renderer *,
 html.ap-mystery-on ytd-watch-metadata *,
@@ -48,12 +49,18 @@ html.ap-mystery-on #header-entry yt-formatted-string.title {
 }
 
 /* 3. Thumbnails & Creator Avatars -> Native Unloaded Grey Placeholders
-      (Scoped to feed/watch cards so top header profile icon & YouTube logo stay visible) */
+      (Includes ytd-browse, ytd-search, and ytd-watch-flexy) */
 html.ap-mystery-on ytd-browse ytd-thumbnail img,
 html.ap-mystery-on ytd-browse yt-thumbnail-view-model img,
 html.ap-mystery-on ytd-browse #thumbnail img,
 html.ap-mystery-on ytd-browse yt-avatar-shape img,
 html.ap-mystery-on ytd-browse #avatar img,
+html.ap-mystery-on ytd-search ytd-thumbnail img,
+html.ap-mystery-on ytd-search yt-thumbnail-view-model img,
+html.ap-mystery-on ytd-search #thumbnail img,
+html.ap-mystery-on ytd-search yt-avatar-shape img,
+html.ap-mystery-on ytd-search #avatar img,
+html.ap-mystery-on ytd-search #avatar-section img,
 html.ap-mystery-on ytd-watch-flexy ytd-thumbnail img,
 html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model img,
 html.ap-mystery-on ytd-watch-flexy #thumbnail img,
@@ -66,6 +73,9 @@ html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow img {
 html.ap-mystery-on ytd-browse ytd-thumbnail,
 html.ap-mystery-on ytd-browse yt-thumbnail-view-model,
 html.ap-mystery-on ytd-browse a#thumbnail,
+html.ap-mystery-on ytd-search ytd-thumbnail,
+html.ap-mystery-on ytd-search yt-thumbnail-view-model,
+html.ap-mystery-on ytd-search a#thumbnail,
 html.ap-mystery-on ytd-watch-flexy ytd-thumbnail,
 html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model,
 html.ap-mystery-on ytd-watch-flexy a#thumbnail {
@@ -75,13 +85,15 @@ html.ap-mystery-on ytd-watch-flexy a#thumbnail {
 
 html.ap-mystery-on ytd-browse yt-avatar-shape,
 html.ap-mystery-on ytd-browse #avatar,
+html.ap-mystery-on ytd-search yt-avatar-shape,
+html.ap-mystery-on ytd-search #avatar,
+html.ap-mystery-on ytd-search #avatar-section yt-img-shadow,
 html.ap-mystery-on ytd-watch-flexy yt-avatar-shape,
 html.ap-mystery-on ytd-watch-flexy #avatar,
 html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow {
   background-color: #272727 !important;
   border-radius: 50% !important;
 }
-
 /* 4. Disable Hover Video Previews & Inline Players */
 html.ap-mystery-on #mouseover-overlay,
 html.ap-mystery-on #hover-overlays,
