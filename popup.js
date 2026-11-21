@@ -108,8 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   toggleMysteryBtn.addEventListener('click', () => {
     mysteryEnabled = !mysteryEnabled;
     chrome.storage.local.set({
-      mysteryShelfEnabled: mysteryEnabled,
-      lastReleasedVideoId: null
+      mysteryShelfEnabled: mysteryEnabled
     }, () => {
       renderUI();
     });

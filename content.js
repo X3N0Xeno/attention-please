@@ -42,12 +42,16 @@
   let lastActionTimestamp = 0;
   let ignoreNextStorageSync = false;
 
-  let commitment = null; // { activeVideoId: string, controls: { playback, freedom } }
+  let commitment = null; // { activeVideoId: string, controls: { ... } }
   let lastReleasedVideoId = null;
 
   function createDefaultControls() {
     return {
       playback: { usesRemaining: 1, exhausted: false, session: null },
+      volume: { usesRemaining: 1, exhausted: false, session: null },
+      seek: { usesRemaining: 1, exhausted: false, session: null },
+      fullscreen: { usesRemaining: 1, exhausted: false, session: null },
+      settings: { usesRemaining: 1, exhausted: false, session: null },
       freedom: { usesRemaining: 0, exhausted: false, session: null }
     };
   }
@@ -87,13 +91,11 @@
     if (!stateLoaded) return;
     const currentVideoId = getVideoIdFromUrl(location.href);
 
-    // If user navigated to a brand-new video, clear the previous release exclusion
     if (currentVideoId && lastReleasedVideoId && currentVideoId !== lastReleasedVideoId) {
       lastReleasedVideoId = null;
       saveState({ lastReleasedVideoId: null });
     }
 
-    // 1. Active commitment exists -> force user onto the locked video
     if (commitment && commitment.activeVideoId) {
       if (currentVideoId !== commitment.activeVideoId) {
         location.replace(`https://www.youtube.com/watch?v=${commitment.activeVideoId}`);
@@ -101,10 +103,11 @@
       return;
     }
 
-    // 2. No active commitment -> lock onto current video ONLY if Mystery Shelf is ON
-    //    AND it isn't the video we just finished or begged free from
     const mysteryOn = document.documentElement.classList.contains('ap-mystery-on');
-    if (mysteryOn && currentVideoId && currentVideoId !== lastReleasedVideoId) {
+    const video = document.querySelector('video');
+    const isFinished = Boolean(video && video.ended);
+
+    if (mysteryOn && currentVideoId && currentVideoId !== lastReleasedVideoId && !isFinished) {
       commitment = {
         activeVideoId: currentVideoId,
         controls: createDefaultControls()
@@ -132,9 +135,6 @@
 
     if (changes.mysteryShelfEnabled) {
       applyVisualState(changes.mysteryShelfEnabled.newValue, true);
-      if (changes.mysteryShelfEnabled.newValue) {
-        lastReleasedVideoId = null;
-      }
       enforceCommitmentOnRoute();
     }
 
@@ -144,7 +144,6 @@
 
     if (changes.commitmentState && !ignoreNextStorageSync) {
       const nextCommitment = changes.commitmentState.newValue || null;
-      // If commitment just cleared externally (e.g., won Beg for Freedom in popup), record excluded ID
       if (!nextCommitment && commitment?.activeVideoId && !lastReleasedVideoId) {
         lastReleasedVideoId = commitment.activeVideoId;
       }
@@ -156,6 +155,27 @@
       }
     }
   });
+
+  // Scrape hidden video metadata for Nutrition Facts before clearing commitment
+  function scrapeCurrentVideoMetadata() {
+    const titleEl =
+      document.querySelector('ytd-watch-metadata h1 yt-formatted-string') ||
+      document.querySelector('meta[name="title"]');
+    const channelEl =
+      document.querySelector('ytd-watch-metadata #channel-name a') ||
+      document.querySelector('link[itemprop="name"]');
+    const descEl =
+      document.querySelector('ytd-watch-metadata #description-inline-expander') ||
+      document.querySelector('meta[name="description"]');
+    const durationEl = document.querySelector('.ytp-time-duration');
+
+    const title = (titleEl?.textContent || titleEl?.getAttribute('content') || document.title.replace(' - YouTube', '')).trim();
+    const channel = (channelEl?.textContent || channelEl?.getAttribute('content') || 'Unknown Creator').trim();
+    const description = (descEl?.textContent || descEl?.getAttribute('content') || '').trim().slice(0, 300);
+    const duration = (durationEl?.textContent || '0:00').trim();
+
+    return { title, channel, description, duration };
+  }
 
   let lastCheckedHref = location.href;
   setInterval(() => {
@@ -169,18 +189,47 @@
       video.dataset.apEndedBound = 'true';
       video.addEventListener('ended', () => {
         if (commitment) {
-          releaseCurrentCommitment(commitment.activeVideoId);
+          const finishedId = commitment.activeVideoId;
+          const videoMeta = scrapeCurrentVideoMetadata();
+          releaseCurrentCommitment(finishedId);
+          showNutritionFactsModal(videoMeta, finishedId);
         }
       });
     }
   }, 500);
 
-  // --- 3. Mystery Shelf Random Video Click Hijacker ---
+  // --- 3. Mystery Shelf Random Video Click Hijacker (Livestream-Exempt) ---
+  function isLiveCard(cardOrAnchor) {
+    const container = cardOrAnchor.closest(
+      'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytd-playlist-panel-video-renderer'
+    ) || cardOrAnchor;
+
+    if (
+      container.querySelector(
+        '[badge-style="BADGE_STYLE_TYPE_LIVE_NOW_ALTERNATE"], .badge-style-type-live-now-alternate, ytd-thumbnail-overlay-time-status-renderer[overlay-style="LIVE"]'
+      )
+    ) {
+      return true;
+    }
+
+    const badges = container.querySelectorAll(
+      'badge-shape, .badge-shape-wiz, ytd-thumbnail-overlay-time-status-renderer, yt-thumbnail-overlay-badge-view-model'
+    );
+    for (const badge of badges) {
+      const txt = badge.textContent?.trim().toUpperCase() || '';
+      if (txt === 'LIVE' || txt.includes('WATCHING')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function pickRandomVisibleVideoUrl(excludeVideoId) {
     const anchors = document.querySelectorAll('a[href*="/watch?v="]');
     const candidates = new Set();
 
     anchors.forEach((a) => {
+      if (isLiveCard(a)) return;
       const id = getVideoIdFromUrl(a.href);
       if (id && id !== excludeVideoId && id !== lastReleasedVideoId) {
         candidates.add(`https://www.youtube.com/watch?v=${id}`);
@@ -197,10 +246,13 @@
     if (!document.documentElement.classList.contains('ap-mystery-on')) return;
     if (!(e.target instanceof Element)) return;
 
-    if (e.target.closest('#movie_player, ytd-masthead, #guide')) return;
+    const isEndscreenCard = e.target.closest(
+      '.html5-endscreen, .ytp-videowall-still, .ytp-modern-videowall-still, .ytp-ce-element'
+    );
+    if (!isEndscreenCard && e.target.closest('#movie_player, ytd-masthead, #guide')) return;
 
     const videoCard = e.target.closest(
-      'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytd-reel-item-renderer, ytd-playlist-panel-video-renderer'
+      'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytd-reel-item-renderer, ytd-playlist-panel-video-renderer, .ytp-videowall-still, .ytp-modern-videowall-still'
     );
     const link = e.target.closest('a[href*="/watch?v="], a[href*="/shorts/"]');
 
@@ -252,6 +304,9 @@
     const video = document.querySelector('video');
     if (!video || !getVideoIdFromUrl(location.href) || !commitment) return;
 
+    if (!commitment.controls.playback) {
+      commitment.controls.playback = { usesRemaining: 1, exhausted: false, session: null };
+    }
     const state = commitment.controls.playback;
 
     if (modalOpen || isKeyRepeat) {
@@ -273,7 +328,7 @@
     }
 
     blockEventCompletely(e);
-    openBegModal();
+    openBegModal('playback');
   }
 
   window.addEventListener(
@@ -308,7 +363,7 @@
         if (e.code === 'Space' || e.key.toLowerCase() === 'k') {
           if (evtType === 'keydown') {
             handlePlaybackToggle(e, e.repeat);
-          } else if (commitment.controls.playback.usesRemaining <= 0) {
+          } else if ((commitment.controls.playback?.usesRemaining ?? 0) <= 0) {
             blockEventCompletely(e);
           }
         }
@@ -318,7 +373,7 @@
   });
 
   // --- 6. Deterministic Begging Logic + Prototype AI Responses ---
-  function evaluatePleaPrototype(userText, attemptsUsed) {
+  function evaluatePleaPrototype(userText, attemptsUsed, displayLabel) {
     const text = userText.trim().toLowerCase();
     const politeMarkers = ['please', 'pretty please', 'beg', 'mommy', 'may i', 'let me', 'sorry', 'plz'];
     const isQualifying = politeMarkers.some((word) => text.includes(word)) && text.length >= 4;
@@ -328,15 +383,15 @@
         isQualifying,
         stage: 1,
         reply: isQualifying
-          ? 'Request logged. Authorization threshold not yet met. Submit further justification.'
-          : 'Access denied. Unformatted demand rejected. State your request properly.'
+          ? `${displayLabel} request logged. Authorization threshold not yet met. Submit further justification.`
+          : `Access denied. Unformatted ${displayLabel} demand rejected. State your request properly.`
       };
     }
 
     const teasingLines = isQualifying
       ? [
           "Aww, look at you actually using your manners. That's cute... keep going.",
-          "Getting warmer, sweetheart. One more proper 'please' and maybe I'll let you.",
+          `Getting warmer, sweetheart. One more proper 'please' for ${displayLabel} and maybe I'll let you.`,
           "Such a good listener. You almost earned it."
         ]
       : [
@@ -349,7 +404,7 @@
     return { isQualifying, stage: 2, reply };
   }
 
-  // --- 7. Headerless Shadow DOM Begging Modal ---
+  // --- 7. Generalized Headerless Shadow DOM Begging Modal ---
   function closeModal() {
     if (hostEl) {
       hostEl.remove();
@@ -358,10 +413,27 @@
     modalOpen = false;
   }
 
-  function openBegModal() {
-    if (!commitment) return;
+  function formatControlLabel(controlName) {
+    const labels = {
+      playback: 'Play/Pause',
+      volume: 'Volume/Mute',
+      seek: 'Seek/Scrub',
+      fullscreen: 'Fullscreen',
+      settings: 'Playback Settings'
+    };
+    if (labels[controlName]) return labels[controlName];
+    return controlName.charAt(0).toUpperCase() + controlName.slice(1);
+  }
+
+  function openBegModal(controlName = 'playback') {
+    if (!commitment || modalOpen) return;
     modalOpen = true;
-    const state = commitment.controls.playback;
+
+    if (!commitment.controls[controlName]) {
+      commitment.controls[controlName] = { usesRemaining: 0, exhausted: false, session: null };
+    }
+    const state = commitment.controls[controlName];
+    const displayLabel = formatControlLabel(controlName);
 
     if (!state.exhausted && !state.session) {
       state.session = {
@@ -492,13 +564,13 @@
 
     if (state.exhausted) {
       modalBox.classList.add('stage-2');
-      addMessage("You already blew your chance to control playback on this video, sweetheart. Deal with it.", false);
+      addMessage(`You already blew your chance to use ${displayLabel} on this video, sweetheart. Deal with it.`, false);
       removeInputControls();
     } else {
       if (state.session.attemptsUsed >= 1) {
         modalBox.classList.add('stage-2');
       }
-      addMessage('Access denied. Play/Pause privilege has already been consumed.', false);
+      addMessage(`Access denied. ${displayLabel} privilege has already been consumed.`, false);
       setTimeout(() => pleaInput.focus(), 50);
     }
 
@@ -511,7 +583,7 @@
       addMessage(val, true);
 
       state.session.attemptsUsed++;
-      const result = evaluatePleaPrototype(val, state.session.attemptsUsed);
+      const result = evaluatePleaPrototype(val, state.session.attemptsUsed, displayLabel);
 
       if (result.isQualifying) {
         state.session.validPleas++;
@@ -522,7 +594,12 @@
       }
 
       if (state.session.validPleas >= 3) {
-        addMessage("Good job. I'll toggle it for you now and give you ONE more freebie. Don't waste it.", false);
+        const winText =
+          controlName === 'playback'
+            ? "Good job. I'll toggle it for you now and give you ONE more freebie. Don't waste it."
+            : `Good job. I'll grant you ONE ${displayLabel} action. Don't waste it.`;
+
+        addMessage(winText, false);
         state.usesRemaining = 1;
         state.session = null;
         saveState({ commitmentState: commitment });
@@ -531,12 +608,14 @@
         setTimeout(() => {
           lastActionTimestamp = Date.now();
           closeModal();
-          const video = document.querySelector('video');
-          if (video) {
-            if (video.paused) {
-              video.play().catch(() => {});
-            } else {
-              video.pause();
+          if (controlName === 'playback') {
+            const video = document.querySelector('video');
+            if (video) {
+              if (video.paused) {
+                video.play().catch(() => {});
+              } else {
+                video.pause();
+              }
             }
           }
         }, 1000);
@@ -547,7 +626,7 @@
         state.exhausted = true;
         state.session = null;
         saveState({ commitmentState: commitment });
-        addMessage("Out of chances. You didn't beg hard enough. Privilege permanently locked.", false);
+        addMessage(`Out of chances. You didn't beg hard enough. ${displayLabel} permanently locked.`, false);
         removeInputControls();
         return;
       }
@@ -566,4 +645,227 @@
     });
     dismissBtn.addEventListener('click', closeModal);
   }
+
+  // --- 8. FDA-Style Shadow DOM Nutrition Facts Modal (Post-Video) ---
+  function generateFallbackNutrition(meta) {
+    const mins = parseInt(meta.duration.split(':')[0], 10) || 3;
+    const calories = Math.max(85, mins * 65);
+    const brainrot = Math.min(99, 42 + mins * 7);
+    return {
+      caloriesWasted: `${calories} kcal`,
+      brainrotPercent: `${brainrot}%`,
+      attentionDamage: mins > 8 ? 'Critical' : 'Moderate-to-Severe',
+      emotionalAftertaste: 'Mild existential static',
+      verdict: `You just traded ${meta.duration} of your finite lifespan to "${meta.title.slice(0, 48)}".`
+    };
+  }
+
+  function showNutritionFactsModal(videoMeta, finishedVideoId) {
+    closeModal();
+    modalOpen = true;
+
+    hostEl = document.createElement('div');
+    hostEl.id = 'ap-nutrition-host';
+    const shadow = hostEl.attachShadow({ mode: 'open' });
+
+    shadow.innerHTML = `
+      <style>
+        .backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.84);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 999999;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .label {
+          width: 340px;
+          background: #ffffff;
+          color: #000000;
+          border: 3px solid #000000;
+          padding: 14px 16px;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+        }
+        .heading {
+          font-size: 28px;
+          font-weight: 900;
+          letter-spacing: -0.5px;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+        .sub {
+          font-size: 11px;
+          border-bottom: 8px solid #000;
+          padding-bottom: 6px;
+          margin-bottom: 6px;
+        }
+        .serving {
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+          font-weight: bold;
+          border-bottom: 1px solid #000;
+          padding-bottom: 4px;
+          margin-bottom: 4px;
+        }
+        .cal-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          border-bottom: 5px solid #000;
+          padding: 4px 0 6px;
+          margin-bottom: 6px;
+        }
+        .cal-title {
+          font-size: 16px;
+          font-weight: 900;
+        }
+        .cal-val {
+          font-size: 26px;
+          font-weight: 900;
+        }
+        .dv-header {
+          text-align: right;
+          font-size: 10px;
+          font-weight: bold;
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+        }
+        .row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+          padding: 5px 0;
+          border-bottom: 1px solid #000;
+        }
+        .row.thick {
+          border-bottom: 5px solid #000;
+        }
+        .verdict {
+          font-size: 11px;
+          line-height: 1.35;
+          padding: 8px 0 12px;
+          font-family: 'Consolas', monospace;
+        }
+        .actions {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        button {
+          width: 100%;
+          padding: 9px 12px;
+          font-family: 'Consolas', monospace;
+          font-size: 11px;
+          font-weight: bold;
+          cursor: pointer;
+          border: 2px solid #000;
+        }
+        .primary {
+          background: #000;
+          color: #fff;
+        }
+        .secondary {
+          background: #fff;
+          color: #000;
+        }
+      </style>
+      <div class="backdrop">
+        <div class="label">
+          <div class="heading">Nutrition Facts</div>
+          <div class="sub">1 completed video (${videoMeta.duration || 'Unknown length'})</div>
+          <div class="serving">
+            <span>Source</span>
+            <span>${videoMeta.channel.slice(0, 26)}</span>
+          </div>
+          <div class="cal-row">
+            <span class="cal-title">Braincells Burned</span>
+            <span class="cal-val" id="nfCalories">...</span>
+          </div>
+          <div class="dv-header">% Daily Regret*</div>
+          <div class="row">
+            <span><strong>Brainrot Concentration</strong></span>
+            <span id="nfBrainrot">...</span>
+          </div>
+          <div class="row">
+            <span><strong>Attention Span Damage</strong></span>
+            <span id="nfDamage">...</span>
+          </div>
+          <div class="row thick">
+            <span><strong>Emotional Aftertaste</strong></span>
+            <span id="nfAftertaste">...</span>
+          </div>
+          <div class="verdict" id="nfVerdict">Analyzing dopamine damage...</div>
+          <div class="actions">
+            <button class="primary" id="nextMysteryBtn">CONSUME ANOTHER MYSTERY VIDEO</button>
+            <button class="secondary" id="closeNfBtn">DISMISS</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(hostEl);
+
+    function populateLabel(stats) {
+      shadow.getElementById('nfCalories').textContent = stats.caloriesWasted;
+      shadow.getElementById('nfBrainrot').textContent = stats.brainrotPercent;
+      shadow.getElementById('nfDamage').textContent = stats.attentionDamage;
+      shadow.getElementById('nfAftertaste').textContent = stats.emotionalAftertaste;
+      shadow.getElementById('nfVerdict').textContent = `*VERDICT: ${stats.verdict}`;
+    }
+
+    // Request live AI Nutrition Facts from background.js with 2.5s local fallback
+    let settled = false;
+    const fallbackTimer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        populateLabel(generateFallbackNutrition(videoMeta));
+      }
+    }, 2500);
+
+    try {
+      chrome.runtime.sendMessage(
+        {
+          type: 'GENERATE_NUTRITION',
+          ...videoMeta
+        },
+        (response) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(fallbackTimer);
+          if (chrome.runtime.lastError || !response || !response.caloriesWasted) {
+            populateLabel(generateFallbackNutrition(videoMeta));
+          } else {
+            populateLabel(response);
+          }
+        }
+      );
+    } catch (_) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(fallbackTimer);
+        populateLabel(generateFallbackNutrition(videoMeta));
+      }
+    }
+
+    shadow.getElementById('nextMysteryBtn').addEventListener('click', () => {
+      closeModal();
+      const nextUrl = pickRandomVisibleVideoUrl(finishedVideoId);
+      if (nextUrl) {
+        location.assign(nextUrl);
+      }
+    });
+
+    shadow.getElementById('closeNfBtn').addEventListener('click', closeModal);
+  }
+
+  // --- 9. Public Bridge for Laptop 3 (lockouts.js) ---
+  window.AP_Modal = {
+    open: openBegModal,
+    isOpen: () => modalOpen,
+    getCommitment: () => commitment,
+    saveCommitment: () => saveState({ commitmentState: commitment })
+  };
 })();
