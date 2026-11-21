@@ -93,22 +93,65 @@
     });
   }
 
+  function readLiveDomMetadata(currentVideoId) {
+    const pick = (sels, attr) => {
+      for (const s of sels) {
+        const el = document.querySelector(s);
+        const v = el && (attr ? el.getAttribute(attr) : el.textContent);
+        if (v && v.trim()) return v.trim();
+      }
+      return '';
+    };
+    const docTitle = document.title.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube\s*$/i, '').trim();
+    const title =
+      pick(['h1.ytd-watch-metadata yt-formatted-string', 'h1.ytd-watch-metadata']) ||
+      (docTitle && docTitle.toLowerCase() !== 'youtube' ? docTitle : '') ||
+      pick(["meta[name='title']"], 'content');
+    const channel =
+      pick(['#owner #channel-name a', 'ytd-channel-name a']) ||
+      pick(["link[itemprop='name']"], 'content') ||
+      'Unknown Creator';
+    const description = (
+      pick(['#description-inner', 'ytd-text-inline-expander']) ||
+      pick(["meta[name='description']"], 'content')
+    ).replace(/\s+/g, ' ').slice(0, 800);
+    const comments = [...document.querySelectorAll('ytd-comment-thread-renderer #content-text')]
+      .slice(0, 5)
+      .map((c) => c.textContent.trim().slice(0, 200))
+      .filter(Boolean);
+    const duration = (document.querySelector('.ytp-time-duration')?.textContent || '0:00').trim();
+    return { videoId: currentVideoId, title, channel, description, comments, duration };
+  }
+
   function getCachedVideoContext() {
     const currentVideoId = getVideoIdFromUrl(location.href) || '';
-    const duration = (document.querySelector('.ytp-time-duration')?.textContent || '').trim();
+    const live = readLiveDomMetadata(currentVideoId);
     if (cachedVideoContext && (!currentVideoId || cachedVideoContext.videoId === currentVideoId)) {
-      if (duration && (!cachedVideoContext.duration || cachedVideoContext.duration === '0:00')) {
-        cachedVideoContext.duration = duration;
-      }
-      return { ...cachedVideoContext };
+      const validCachedTitle =
+        cachedVideoContext.title && cachedVideoContext.title.toLowerCase() !== 'youtube'
+          ? cachedVideoContext.title
+          : '';
+      return {
+        videoId: cachedVideoContext.videoId || currentVideoId,
+        title: validCachedTitle || live.title || 'Untitled Video',
+        channel:
+          (cachedVideoContext.channel && cachedVideoContext.channel !== 'Unknown Creator'
+            ? cachedVideoContext.channel
+            : live.channel) || 'Unknown Creator',
+        description: cachedVideoContext.description || live.description || '',
+        comments:
+          Array.isArray(cachedVideoContext.comments) && cachedVideoContext.comments.length
+            ? cachedVideoContext.comments
+            : live.comments,
+        duration:
+          cachedVideoContext.duration && cachedVideoContext.duration !== '0:00'
+            ? cachedVideoContext.duration
+            : live.duration
+      };
     }
     return {
-      videoId: currentVideoId,
-      title: document.title.replace(/\s*-\s*YouTube\s*$/, '').trim(),
-      channel: 'Unknown Creator',
-      description: '',
-      comments: [],
-      duration: duration || '0:00'
+      ...live,
+      title: live.title || 'Untitled Video'
     };
   }
 

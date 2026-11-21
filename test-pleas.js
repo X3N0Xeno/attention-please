@@ -194,9 +194,10 @@ async function runUnitChecks() {
       assert.strictEqual(g.source, "fallback");
       assert.strictEqual(g.accepted, true, "EVALUATE_GOOD_BOY fallback must never block unlocking");
 
-      const n = await generateNutrition({ title: "Test" });
+      const n = await generateNutrition({ title: "Ancient Greece Study Playlist", channel: "nobody", duration: "12:00" });
       assert.strictEqual(n.source, "fallback");
       assert.strictEqual(typeof n.caloriesWasted, "number");
+      assert.ok(n.verdict.includes("Ancient Greece Study Playlist"), "Fallback verdict must reference the video title");
     }
   );
 

@@ -1,14 +1,16 @@
 (() => {
   let modalOpen = false;
   let hostEl = null;
-  let currentSubmitPlea = null;
-  let currentPleaInput = null;
+  let activeSubmitPlea = null;
+  let activeFocusInput = null;
 
   function closeModal() {
     if (hostEl) {
       hostEl.remove();
       hostEl = null;
     }
+    activeSubmitPlea = null;
+    activeFocusInput = null;
     modalOpen = false;
     currentSubmitPlea = null;
     currentPleaInput = null;
@@ -588,8 +590,10 @@
       }
     }
 
-    currentSubmitPlea = submitPlea;
-    currentPleaInput = pleaInput;
+    activeSubmitPlea = submitPlea;
+    activeFocusInput = () => {
+      if (pleaInput.isConnected && !pleaInput.disabled) pleaInput.focus();
+    };
 
     sendBtn.addEventListener('click', submitPlea);
 
