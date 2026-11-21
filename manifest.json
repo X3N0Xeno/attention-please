@@ -22,8 +22,15 @@
     {
       "matches": ["*://*.youtube.com/*"],
       "css": ["styles.css"],
-      "js": ["video-context.js", "content.js"],
-      "run_at": "document_idle"
+      "js": [
+        "video-context.js",
+        "state.js",
+        "modal.js",
+        "feed.js",
+        "content.js",
+        "lockouts.js"
+      ],
+      "run_at": "document_start"
     }
   ]
 }

@@ -2,84 +2,193 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Attention, please!</title>
   <style>
-    body {
-      width: 260px;
+    * {
+      box-sizing: border-box;
       margin: 0;
-      padding: 16px;
-      background: #0d0d0d;
+      padding: 0;
+    }
+    body {
+      width: 340px;
+      background-color: #0a0a0a;
+      background-image: radial-gradient(#242424 1px, transparent 1px);
+      background-size: 14px 14px;
       color: #e5e5e5;
       font-family: 'Consolas', 'Courier New', monospace;
+      padding: 15px;
+      border: 2px solid #383838;
+      transition: border-color 0.25s ease;
+    }
+    body.stage-2 {
+      border-color: #d946ef;
     }
     .header {
-      border-bottom: 1px solid #2a2a2a;
-      padding-bottom: 10px;
-      margin-bottom: 14px;
-    }
-    .title {
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      color: #ffffff;
-    }
-    .tagline {
-      font-size: 11px;
-      color: #777;
-      margin-top: 3px;
-    }
-    .row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #2b2b2b;
     }
-    .label {
+    .title {
       font-size: 12px;
-      text-transform: uppercase;
-    }
-    button {
-      background: #1f1f1f;
+      font-weight: bold;
+      letter-spacing: 0.08em;
       color: #fff;
-      border: 1px solid #444;
-      padding: 6px 14px;
-      font-family: inherit;
-      font-size: 12px;
-      cursor: pointer;
     }
-    button.active {
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: #141414;
+      border: 1px solid #525252;
+      color: #a3a3a3;
+    }
+    .status-badge.locked {
+      border-color: #ef4444;
+      color: #fca5a5;
+      background: #2a0a0a;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    /* Always-Visible Mystery Shelf Toggle */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #111111;
+      border: 1px solid #2e2e2e;
+      padding: 11px;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    .toggle-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #e5e5e5;
+    }
+    .toggle-sub {
+      font-size: 10px;
+      color: #888;
+      margin-top: 3px;
+      line-height: 1.35;
+    }
+    .toggle-btn {
+      background: #141414;
+      color: #a3a3a3;
+      border: 2px solid #404040;
+      box-shadow: 3px 3px 0px #262626;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .toggle-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #262626;
+    }
+    .toggle-btn.active {
       background: #ffffff;
       color: #000000;
-      font-weight: bold;
+      border-color: #ffffff;
+      box-shadow: 3px 3px 0px #525252;
     }
-    .status {
-      margin-top: 12px;
-      font-size: 11px;
-      color: #888;
-      line-height: 1.4;
+    .toggle-btn.active:active {
+      box-shadow: 1px 1px 0px #525252;
     }
-    .commitment-box {
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px solid #262626;
+
+    /* Beg for Freedom Section */
+    .lock-banner {
+      background: #180d1c;
+      border-left: 3px solid #d946ef;
+      padding: 8px 10px;
       font-size: 11px;
       color: #f0abfc;
-      display: none;
+      margin-bottom: 10px;
+      line-height: 1.4;
     }
-    .commitment-box.visible {
-      display: block;
+    .chat-box {
+      height: 145px;
+      overflow-y: auto;
+      background: #0e0e0e;
+      border: 1px solid #2e2e2e;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.4;
     }
+    .msg-ai {
+      background: #161616;
+      padding: 6px 8px;
+      border-left: 3px solid #666;
+      color: #e5e5e5;
+    }
+    body.stage-2 .msg-ai {
+      background: #180d1c;
+      border-left-color: #d946ef;
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: #222;
+      border: 1px solid #383838;
+      padding: 5px 8px;
+      color: #fff;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    input {
+      flex: 1;
+      background: #111;
+      border: 1px solid #3a3a3a;
+      color: #fff;
+      padding: 7px 9px;
+      font-family: inherit;
+      font-size: 11px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #d946ef;
+    }
+    .submit-btn {
+      background: #d946ef;
+      color: #000000;
+      border: 2px solid #d946ef;
+      box-shadow: 3px 3px 0px #701a75;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .submit-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #701a75;
+    }
+
+    /* Footer */
     .footer {
-      margin-top: 14px;
-      padding-top: 8px;
-      border-top: 1px dashed #222;
       display: flex;
       justify-content: flex-end;
+      padding-top: 8px;
+      border-top: 1px solid #222;
     }
     .reset-btn {
       background: transparent;
       border: none;
-      color: #555;
+      color: #666;
+      font-family: inherit;
       font-size: 10px;
-      padding: 0;
       cursor: pointer;
     }
     .reset-btn:hover {
@@ -89,23 +198,35 @@
 </head>
 <body>
   <div class="header">
-    <div class="title">ATTENTION, PLEASE!</div>
-    <div class="tagline">You clicked it. Now live with it.</div>
+    <span class="title">ATTENTION, PLEASE!</span>
+    <span class="status-badge" id="statusBadge">IDLE</span>
   </div>
 
-  <div class="row">
-    <span class="label">Mystery Shelf</span>
-    <button id="toggleBtn">OFF</button>
+  <!-- Always Visible: Mystery Shelf Toggle -->
+  <div id="normalView">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Mystery Shelf</div>
+        <div class="toggle-sub">Suppress thumbnails &amp; randomize clicks</div>
+      </div>
+      <button class="toggle-btn" id="toggleMysteryBtn">OFF</button>
+    </div>
   </div>
 
-  <div class="status" id="statusText">Visual masking inactive.</div>
-
-  <div class="commitment-box" id="commitmentBox">
-    COMMITMENT ACTIVE: Locked to current video until completion.
+  <!-- Appears Below Toggle When Committed to a Video -->
+  <div id="freedomView" class="hidden">
+    <div class="lock-banner" id="lockBanner">
+      COMMITMENT ACTIVE: Toggling Mystery Shelf won't save you. Finish the video—or beg for freedom.
+    </div>
+    <div class="chat-box" id="chatLog"></div>
+    <div class="input-row" id="inputRow">
+      <input type="text" id="pleaInput" placeholder="Beg to escape this video..." autocomplete="off" />
+      <button class="submit-btn" id="sendBtn">BEG</button>
+    </div>
   </div>
 
   <div class="footer">
-    <button class="reset-btn" id="resetBtn">[EMERGENCY RESET]</button>
+    <button class="reset-btn" id="emergencyResetBtn">[EMERGENCY RESET]</button>
   </div>
 
   <script src="popup.js"></script>

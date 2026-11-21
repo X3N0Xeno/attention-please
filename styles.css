@@ -3,23 +3,35 @@ ytd-thumbnail img,
 yt-thumbnail-view-model img,
 #thumbnail img,
 yt-avatar-shape img,
+yt-decorated-avatar-view-model img,
 #avatar img,
 yt-img-shadow img {
   transition: opacity 0.3s ease !important;
 }
 
-/* 1. Hide ONLY Video Card Text, Channel Names, Watch Metadata, and Sidebar Channel/Item Names
-      (Leaves Top Header/Premium, Filter Chips, Sidebar Section Headers, and Video Durations untouched) */
+/* 1. Hide Video Card Text, Channel Results, Ads, Watch Metadata, and Sidebar Names */
 html.ap-mystery-on ytd-rich-item-renderer *:not(yt-thumbnail-bottom-overlay-view-model):not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape):not(badge-shape *):not(.badge-shape-wiz):not(.badge-shape-wiz *),
 html.ap-mystery-on ytd-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
 html.ap-mystery-on ytd-compact-video-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
 html.ap-mystery-on yt-lockup-view-model *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on #secondary ytd-item-section-renderer *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on #related *:not(yt-thumbnail-bottom-overlay-view-model *):not(yt-thumbnail-overlay-badge-view-model *):not(ytd-thumbnail-overlay-time-status-renderer *):not(badge-shape *),
+html.ap-mystery-on ytd-channel-renderer *,
+html.ap-mystery-on ytd-ad-slot-renderer *,
 html.ap-mystery-on ytm-shorts-lockup-view-model *,
 html.ap-mystery-on ytd-reel-item-renderer *,
 html.ap-mystery-on ytd-watch-metadata *,
 html.ap-mystery-on #secondary ytd-playlist-panel-video-renderer *,
 html.ap-mystery-on ytd-guide-entry-renderer yt-formatted-string.title,
 html.ap-mystery-on ytd-mini-guide-entry-renderer span.title {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  user-select: none !important;
+}
+html.ap-mystery-on .html5-endscreen *:not(.ytp-videowall-still-info-duration):not(.ytp-modern-videowall-still-duration),
+html.ap-mystery-on .ytp-videowall-still *,
+html.ap-mystery-on .ytp-modern-videowall-still * {
   color: transparent !important;
   -webkit-text-fill-color: transparent !important;
   text-shadow: none !important;
@@ -46,40 +58,55 @@ html.ap-mystery-on #header-entry yt-formatted-string.title {
   color: #f1f1f1 !important;
   -webkit-text-fill-color: #f1f1f1 !important;
 }
+html.ap-mystery-on .ytp-videowall-still-info-duration,
+html.ap-mystery-on .ytp-modern-videowall-still-duration {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
+}
 
-/* 3. Thumbnails & Creator Avatars -> Native Unloaded Grey Placeholders
-      (Scoped to feed/watch cards so top header profile icon & YouTube logo stay visible) */
-html.ap-mystery-on ytd-browse ytd-thumbnail img,
-html.ap-mystery-on ytd-browse yt-thumbnail-view-model img,
-html.ap-mystery-on ytd-browse #thumbnail img,
-html.ap-mystery-on ytd-browse yt-avatar-shape img,
-html.ap-mystery-on ytd-browse #avatar img,
-html.ap-mystery-on ytd-watch-flexy ytd-thumbnail img,
-html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model img,
-html.ap-mystery-on ytd-watch-flexy #thumbnail img,
-html.ap-mystery-on ytd-watch-flexy yt-avatar-shape img,
-html.ap-mystery-on ytd-watch-flexy #avatar img,
+/* 3. Thumbnails & Creator Avatars -> Native Unloaded Grey Placeholders (Global across Home, Search, Watch & Sidebar) */
+html.ap-mystery-on ytd-thumbnail img,
+html.ap-mystery-on yt-thumbnail-view-model img,
+html.ap-mystery-on #thumbnail img,
+html.ap-mystery-on yt-avatar-shape img,
+html.ap-mystery-on yt-decorated-avatar-view-model img,
+html.ap-mystery-on #avatar img,
+html.ap-mystery-on #avatar-section img,
+html.ap-mystery-on #secondary img,
+html.ap-mystery-on #related img,
 html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow img {
   opacity: 0 !important;
 }
 
-html.ap-mystery-on ytd-browse ytd-thumbnail,
-html.ap-mystery-on ytd-browse yt-thumbnail-view-model,
-html.ap-mystery-on ytd-browse a#thumbnail,
-html.ap-mystery-on ytd-watch-flexy ytd-thumbnail,
-html.ap-mystery-on ytd-watch-flexy yt-thumbnail-view-model,
-html.ap-mystery-on ytd-watch-flexy a#thumbnail {
+html.ap-mystery-on ytd-thumbnail,
+html.ap-mystery-on yt-thumbnail-view-model,
+html.ap-mystery-on a#thumbnail,
+html.ap-mystery-on a.yt-lockup-view-model__content-image {
   background-color: #272727 !important;
   border-radius: 12px !important;
 }
 
-html.ap-mystery-on ytd-browse yt-avatar-shape,
-html.ap-mystery-on ytd-browse #avatar,
-html.ap-mystery-on ytd-watch-flexy yt-avatar-shape,
-html.ap-mystery-on ytd-watch-flexy #avatar,
+html.ap-mystery-on yt-avatar-shape,
+html.ap-mystery-on yt-decorated-avatar-view-model,
+html.ap-mystery-on #avatar,
+html.ap-mystery-on #avatar-section yt-img-shadow,
 html.ap-mystery-on ytd-guide-section-renderer yt-img-shadow {
   background-color: #272727 !important;
   border-radius: 50% !important;
+}
+
+html.ap-mystery-on .ytp-videowall-still-image,
+html.ap-mystery-on .ytp-modern-videowall-still-image,
+html.ap-mystery-on .html5-endscreen img {
+  opacity: 0 !important;
+  background-image: none !important;
+}
+
+html.ap-mystery-on .ytp-videowall-still,
+html.ap-mystery-on .ytp-modern-videowall-still {
+  background-color: #272727 !important;
+  border-radius: 12px !important;
 }
 
 /* 4. Disable Hover Video Previews & Inline Players */
@@ -87,7 +114,8 @@ html.ap-mystery-on #mouseover-overlay,
 html.ap-mystery-on #hover-overlays,
 html.ap-mystery-on ytd-moving-thumbnail-renderer,
 html.ap-mystery-on ytd-video-preview,
-html.ap-mystery-on #inline-preview-player {
+html.ap-mystery-on #inline-preview-player,
+html.ap-mystery-on .ytp-ce-element {
   display: none !important;
   pointer-events: none !important;
 }
