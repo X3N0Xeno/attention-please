@@ -22,6 +22,17 @@
     window.AP_Feed.applyVisualState(enabled, withWave);
   });
 
+  function clampSeekToHalfway(vid) {
+    if (!vid || !vid.duration || !Number.isFinite(vid.duration)) return;
+    const commitment = window.AP_State?.getCommitment();
+    if (!commitment || !commitment.activeVideoId) return;
+
+    const maxHalfway = vid.duration / 2;
+    if (vid.currentTime > maxHalfway) {
+      vid.currentTime = maxHalfway;
+    }
+  }
+
   // Watch SPA route changes & video completion
   let lastCheckedHref = location.href;
   setInterval(() => {
@@ -31,17 +42,43 @@
     }
 
     const video = document.querySelector('video');
-    if (video && !video.dataset.apEndedBound) {
-      video.dataset.apEndedBound = 'true';
-      video.addEventListener('ended', () => {
-        const commitment = window.AP_State.getCommitment();
-        if (commitment) {
-          const finishedId = commitment.activeVideoId;
-          const videoMeta = window.AP_State.getCachedVideoContext();
-          window.AP_State.releaseCurrentCommitment(finishedId);
-          window.AP_Modals.showNutritionFacts(videoMeta, finishedId);
-        }
-      });
+    if (video) {
+      if (!video.dataset.apSeekBound) {
+        video.dataset.apSeekBound = 'true';
+        let lastKnownTime = video.currentTime || 0;
+
+        video.addEventListener('seeking', () => {
+          clampSeekToHalfway(video);
+        });
+
+        video.addEventListener('seeked', () => {
+          clampSeekToHalfway(video);
+        });
+
+        video.addEventListener('timeupdate', () => {
+          const commitment = window.AP_State?.getCommitment();
+          if (commitment && commitment.activeVideoId && video.duration && Number.isFinite(video.duration)) {
+            const maxHalfway = video.duration / 2;
+            if (video.currentTime > maxHalfway && (video.seeking || video.currentTime - lastKnownTime > 2.5)) {
+              video.currentTime = maxHalfway;
+            }
+          }
+          lastKnownTime = video.currentTime;
+        });
+      }
+
+      if (!video.dataset.apEndedBound) {
+        video.dataset.apEndedBound = 'true';
+        video.addEventListener('ended', () => {
+          const commitment = window.AP_State.getCommitment();
+          if (commitment) {
+            const finishedId = commitment.activeVideoId;
+            const videoMeta = window.AP_State.getCachedVideoContext();
+            window.AP_State.releaseCurrentCommitment(finishedId);
+            window.AP_Modals.showNutritionFacts(videoMeta, finishedId);
+          }
+        });
+      }
     }
   }, 500);
 
@@ -54,6 +91,7 @@
     saveCommitment: () => window.AP_State.saveCommitment(),
     getLastActionTs: () => lastActionTimestamp,
     setLastActionTs: (ts) => { lastActionTimestamp = ts; },
-    isUserTyping
+    isUserTyping,
+    clampSeekToHalfway
   };
 })();
