@@ -57,8 +57,12 @@ async function withStubbedGemini(fakeFetch, fn) {
   const origWarn = sandbox.console.warn;
   const cfg = sandbox.getConfig();
   const origMock = cfg.USE_MOCK;
+  const origKey = cfg.GEMINI_API_KEY;
   try {
     cfg.USE_MOCK = false;
+    if (!cfg.GEMINI_API_KEY || cfg.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+      cfg.GEMINI_API_KEY = "test-stub-key";
+    }
     sandbox.fetch = fakeFetch;
     sandbox.console = { ...console, warn: () => {} }; // silence expected fallback warnings during test
     return await fn();
@@ -66,6 +70,7 @@ async function withStubbedGemini(fakeFetch, fn) {
     sandbox.fetch = origFetch;
     sandbox.console = { ...console, warn: origWarn };
     cfg.USE_MOCK = origMock;
+    cfg.GEMINI_API_KEY = origKey;
   }
 }
 

@@ -17,6 +17,11 @@ function getConfig() {
   return DEFAULT_CONFIG;
 }
 
+function isMockMode() {
+  const cfg = getConfig();
+  return Boolean(cfg.USE_MOCK || !cfg.GEMINI_API_KEY || cfg.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE");
+}
+
 async function callGemini({ system, contents, temperature = 0.4, timeoutMs = 8000, maxOutputTokens = 300 }) {
   const cfg = getConfig();
   const ctrl = new AbortController();
@@ -178,7 +183,7 @@ function buildTurns(history, userText) {
 }
 
 async function evaluatePlea({ controlName = "escape", userText = "", attemptNumber = 1, history = [], videoTitle = "" } = {}) {
-  if (getConfig().USE_MOCK) return { ...heuristicPlea(userText, attemptNumber), source: "mock" };
+  if (isMockMode()) return { ...heuristicPlea(userText, attemptNumber), source: "mock" };
 
   const stage = stageFor(attemptNumber);
   try {
@@ -238,10 +243,9 @@ Respond with ONLY this JSON, no markdown, no extra text:
 }
 
 async function evaluateGoodBoy({ userText = "" } = {}) {
-  const cfg = getConfig();
-  if (cfg.USE_MOCK) {
-    // Missing config.js falls back to DEFAULT_CONFIG; never block unlocking when unconfigured.
-    if (typeof CONFIG === "undefined") {
+  if (isMockMode()) {
+    // Missing config.js or unconfigured key falls back to mock; never block unlocking when unconfigured.
+    if (typeof CONFIG === "undefined" || !CONFIG.GEMINI_API_KEY || CONFIG.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
       const petName = PET_NAMES[Math.floor(Math.random() * PET_NAMES.length)];
       return {
         accepted: true,
@@ -335,7 +339,7 @@ async function generateNutrition(context = {}) {
     emotionalAftertaste: "Mild regret, hint of curiosity",
     verdict: "Technically a video. Consume responsibly, or don't.",
   };
-  if (getConfig().USE_MOCK) return { ...fallback, source: "mock" };
+  if (isMockMode()) return { ...fallback, source: "mock" };
 
   try {
     const raw = await callGemini({
