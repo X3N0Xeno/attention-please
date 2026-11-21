@@ -35,20 +35,22 @@
     );
   });
 
-  // --- 2. Persistent Commitment & Unified Play/Pause Privilege ---
+  // --- 2. Persistent Commitment & Same-Video Re-lock Guard ---
   let modalOpen = false;
   let hostEl = null;
   let stateLoaded = false;
   let lastActionTimestamp = 0;
   let ignoreNextStorageSync = false;
 
+  let commitment = null; // { activeVideoId: string, controls: { playback, freedom } }
+  let lastReleasedVideoId = null;
+
   function createDefaultControls() {
     return {
-      playback: { usesRemaining: 1, exhausted: false, session: null }
+      playback: { usesRemaining: 1, exhausted: false, session: null },
+      freedom: { usesRemaining: 0, exhausted: false, session: null }
     };
   }
-
-  let commitment = null; // { activeVideoId: string, controls: { playback } }
 
   function getVideoIdFromUrl(urlStr) {
     try {
@@ -63,29 +65,35 @@
     return null;
   }
 
-  function saveCommitment() {
+  function saveState(updates) {
     ignoreNextStorageSync = true;
-    if (commitment) {
-      chrome.storage.local.set({ commitmentState: JSON.parse(JSON.stringify(commitment)) }, () => {
-        setTimeout(() => { ignoreNextStorageSync = false; }, 100);
-      });
-    } else {
-      chrome.storage.local.remove('commitmentState', () => {
-        setTimeout(() => { ignoreNextStorageSync = false; }, 100);
-      });
-    }
+    const payload = JSON.parse(JSON.stringify(updates));
+    chrome.storage.local.set(payload, () => {
+      setTimeout(() => { ignoreNextStorageSync = false; }, 120);
+    });
   }
 
-  function clearCommitment() {
+  function releaseCurrentCommitment(videoIdToExclude) {
     commitment = null;
+    lastReleasedVideoId = videoIdToExclude || null;
     closeModal();
-    saveCommitment();
+    saveState({
+      commitmentState: null,
+      lastReleasedVideoId: lastReleasedVideoId
+    });
   }
 
   function enforceCommitmentOnRoute() {
     if (!stateLoaded) return;
     const currentVideoId = getVideoIdFromUrl(location.href);
 
+    // If user navigated to a brand-new video, clear the previous release exclusion
+    if (currentVideoId && lastReleasedVideoId && currentVideoId !== lastReleasedVideoId) {
+      lastReleasedVideoId = null;
+      saveState({ lastReleasedVideoId: null });
+    }
+
+    // 1. Active commitment exists -> force user onto the locked video
     if (commitment && commitment.activeVideoId) {
       if (currentVideoId !== commitment.activeVideoId) {
         location.replace(`https://www.youtube.com/watch?v=${commitment.activeVideoId}`);
@@ -93,24 +101,27 @@
       return;
     }
 
+    // 2. No active commitment -> lock onto current video ONLY if Mystery Shelf is ON
+    //    AND it isn't the video we just finished or begged free from
     const mysteryOn = document.documentElement.classList.contains('ap-mystery-on');
-    if (mysteryOn && currentVideoId) {
+    if (mysteryOn && currentVideoId && currentVideoId !== lastReleasedVideoId) {
       commitment = {
         activeVideoId: currentVideoId,
         controls: createDefaultControls()
       };
-      saveCommitment();
+      saveState({ commitmentState: commitment });
     }
   }
 
   chrome.storage.local.get(
-    { mysteryShelfEnabled: false, commitmentState: null },
+    { mysteryShelfEnabled: false, commitmentState: null, lastReleasedVideoId: null },
     (data) => {
       applyVisualState(data.mysteryShelfEnabled, false);
       if (data.commitmentState && !data.commitmentState.controls?.playback) {
         data.commitmentState.controls = createDefaultControls();
       }
       commitment = data.commitmentState;
+      lastReleasedVideoId = data.lastReleasedVideoId || null;
       stateLoaded = true;
       enforceCommitmentOnRoute();
     }
@@ -121,11 +132,23 @@
 
     if (changes.mysteryShelfEnabled) {
       applyVisualState(changes.mysteryShelfEnabled.newValue, true);
+      if (changes.mysteryShelfEnabled.newValue) {
+        lastReleasedVideoId = null;
+      }
       enforceCommitmentOnRoute();
     }
 
+    if (changes.lastReleasedVideoId && !ignoreNextStorageSync) {
+      lastReleasedVideoId = changes.lastReleasedVideoId.newValue || null;
+    }
+
     if (changes.commitmentState && !ignoreNextStorageSync) {
-      commitment = changes.commitmentState.newValue || null;
+      const nextCommitment = changes.commitmentState.newValue || null;
+      // If commitment just cleared externally (e.g., won Beg for Freedom in popup), record excluded ID
+      if (!nextCommitment && commitment?.activeVideoId && !lastReleasedVideoId) {
+        lastReleasedVideoId = commitment.activeVideoId;
+      }
+      commitment = nextCommitment;
       if (!commitment) {
         closeModal();
       } else {
@@ -146,7 +169,7 @@
       video.dataset.apEndedBound = 'true';
       video.addEventListener('ended', () => {
         if (commitment) {
-          clearCommitment();
+          releaseCurrentCommitment(commitment.activeVideoId);
         }
       });
     }
@@ -159,7 +182,7 @@
 
     anchors.forEach((a) => {
       const id = getVideoIdFromUrl(a.href);
-      if (id && id !== excludeVideoId) {
+      if (id && id !== excludeVideoId && id !== lastReleasedVideoId) {
         candidates.add(`https://www.youtube.com/watch?v=${id}`);
       }
     });
@@ -174,7 +197,6 @@
     if (!document.documentElement.classList.contains('ap-mystery-on')) return;
     if (!(e.target instanceof Element)) return;
 
-    // Ignore clicks on player controls, top masthead, or guide sidebar
     if (e.target.closest('#movie_player, ytd-masthead, #guide')) return;
 
     const videoCard = e.target.closest(
@@ -184,15 +206,12 @@
 
     if (!videoCard && !link) return;
 
-    // Prevent YouTube SPA navigation & new-tab escapes (middle-click / Ctrl+click)
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
 
-    // Only trigger redirect on primary or middle click (ignore right-click context menu)
     if (e.button !== 0 && e.button !== 1) return;
 
-    // If already committed to a video, route back to the locked video
     if (commitment && commitment.activeVideoId) {
       location.assign(`https://www.youtube.com/watch?v=${commitment.activeVideoId}`);
       return;
@@ -200,7 +219,9 @@
 
     const targetHref = link ? link.href : videoCard.querySelector('a[href*="/watch?v="], a[href*="/shorts/"]')?.href;
     const clickedId = targetHref ? getVideoIdFromUrl(targetHref) : null;
-    const randomUrl = pickRandomVisibleVideoUrl(clickedId) || (clickedId ? `https://www.youtube.com/watch?v=${clickedId}` : null);
+    const randomUrl =
+      pickRandomVisibleVideoUrl(clickedId) ||
+      (clickedId ? `https://www.youtube.com/watch?v=${clickedId}` : null);
 
     if (randomUrl) {
       location.assign(randomUrl);
@@ -247,8 +268,8 @@
     if (state.usesRemaining > 0) {
       lastActionTimestamp = now;
       state.usesRemaining--;
-      saveCommitment();
-      return; // Allow this 1 native Play/Pause toggle
+      saveState({ commitmentState: commitment });
+      return;
     }
 
     blockEventCompletely(e);
@@ -275,7 +296,6 @@
       (e) => {
         if (modalOpen) {
           const path = e.composedPath ? e.composedPath() : [];
-          // Allow typing & Enter inside our Shadow DOM modal while blocking YouTube hotkeys
           if (hostEl && path.includes(hostEl)) {
             return;
           }
@@ -349,7 +369,7 @@
         attemptsUsed: 0,
         validPleas: 0
       };
-      saveCommitment();
+      saveState({ commitmentState: commitment });
     }
 
     hostEl = document.createElement('div');
@@ -501,12 +521,11 @@
         modalBox.classList.add('stage-2');
       }
 
-      // Deterministic Win: 3 qualifying pleas -> auto-toggle video + grant 1 extra manual use!
       if (state.session.validPleas >= 3) {
         addMessage("Good job. I'll toggle it for you now and give you ONE more freebie. Don't waste it.", false);
         state.usesRemaining = 1;
         state.session = null;
-        saveCommitment();
+        saveState({ commitmentState: commitment });
         removeInputControls();
 
         setTimeout(() => {
@@ -524,17 +543,16 @@
         return;
       }
 
-      // Deterministic Fail: ran out of hidden 3-5 replies
       if (state.session.attemptsUsed >= state.session.maxAttempts) {
         state.exhausted = true;
         state.session = null;
-        saveCommitment();
+        saveState({ commitmentState: commitment });
         addMessage("Out of chances. You didn't beg hard enough. Privilege permanently locked.", false);
         removeInputControls();
         return;
       }
 
-      saveCommitment();
+      saveState({ commitmentState: commitment });
       addMessage(result.reply, false);
     }
 

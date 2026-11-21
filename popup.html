@@ -2,84 +2,169 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Attention, please!</title>
   <style>
-    body {
-      width: 260px;
+    * {
+      box-sizing: border-box;
       margin: 0;
-      padding: 16px;
-      background: #0d0d0d;
+      padding: 0;
+    }
+    body {
+      width: 340px;
+      background: #0e0e0e;
       color: #e5e5e5;
       font-family: 'Consolas', 'Courier New', monospace;
+      padding: 16px;
+      border: 1px solid #2a2a2a;
+      transition: border-color 0.3s ease;
+    }
+    body.stage-2 {
+      border-color: #d946ef;
     }
     .header {
-      border-bottom: 1px solid #2a2a2a;
-      padding-bottom: 10px;
-      margin-bottom: 14px;
-    }
-    .title {
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      color: #ffffff;
-    }
-    .tagline {
-      font-size: 11px;
-      color: #777;
-      margin-top: 3px;
-    }
-    .row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #242424;
     }
-    .label {
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-    button {
-      background: #1f1f1f;
+    .title {
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
       color: #fff;
-      border: 1px solid #444;
-      padding: 6px 14px;
-      font-family: inherit;
+    }
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      color: #888;
+    }
+    .status-badge.locked {
+      border-color: #d946ef;
+      color: #d946ef;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    /* Always-Visible Mystery Shelf Toggle */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #161616;
+      border: 1px solid #2c2c2c;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .toggle-label {
       font-size: 12px;
+      color: #ddd;
+    }
+    .toggle-sub {
+      font-size: 10px;
+      color: #777;
+      margin-top: 3px;
+    }
+    .toggle-btn {
+      background: #222;
+      color: #aaa;
+      border: 1px solid #444;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
       cursor: pointer;
     }
-    button.active {
-      background: #ffffff;
-      color: #000000;
-      font-weight: bold;
+    .toggle-btn.active {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
     }
-    .status {
-      margin-top: 12px;
+
+    /* Beg for Freedom Section (Shown Below Toggle When Locked) */
+    .lock-banner {
+      background: #181818;
+      border-left: 2px solid #d946ef;
+      padding: 8px 10px;
       font-size: 11px;
-      color: #888;
+      color: #ccc;
+      margin-bottom: 10px;
       line-height: 1.4;
     }
-    .commitment-box {
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px solid #262626;
+    .chat-box {
+      height: 145px;
+      overflow-y: auto;
+      background: #121212;
+      border: 1px solid #262626;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .msg-ai {
+      background: #1a1a1a;
+      padding: 6px 8px;
+      border-left: 2px solid #666;
+      color: #e5e5e5;
+    }
+    body.stage-2 .msg-ai {
+      border-left-color: #d946ef;
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: #282828;
+      padding: 5px 8px;
+      color: #fff;
+    }
+    .input-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    input {
+      flex: 1;
+      background: #161616;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 7px 9px;
+      font-family: inherit;
       font-size: 11px;
-      color: #f0abfc;
-      display: none;
+      outline: none;
     }
-    .commitment-box.visible {
-      display: block;
+    input:focus {
+      border-color: #666;
     }
+    .submit-btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Footer */
     .footer {
-      margin-top: 14px;
-      padding-top: 8px;
-      border-top: 1px dashed #222;
       display: flex;
       justify-content: flex-end;
+      padding-top: 8px;
+      border-top: 1px solid #1e1e1e;
     }
     .reset-btn {
       background: transparent;
       border: none;
       color: #555;
+      font-family: inherit;
       font-size: 10px;
-      padding: 0;
       cursor: pointer;
     }
     .reset-btn:hover {
@@ -89,23 +174,35 @@
 </head>
 <body>
   <div class="header">
-    <div class="title">ATTENTION, PLEASE!</div>
-    <div class="tagline">You clicked it. Now live with it.</div>
+    <span class="title">ATTENTION, PLEASE!</span>
+    <span class="status-badge" id="statusBadge">IDLE</span>
   </div>
 
-  <div class="row">
-    <span class="label">Mystery Shelf</span>
-    <button id="toggleBtn">OFF</button>
+  <!-- Always Visible: Mystery Shelf Toggle -->
+  <div id="normalView">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Mystery Shelf</div>
+        <div class="toggle-sub">Suppress thumbnails & randomize clicks</div>
+      </div>
+      <button class="toggle-btn" id="toggleMysteryBtn">OFF</button>
+    </div>
   </div>
 
-  <div class="status" id="statusText">Visual masking inactive.</div>
-
-  <div class="commitment-box" id="commitmentBox">
-    COMMITMENT ACTIVE: Locked to current video until completion.
+  <!-- Appears Below Toggle When Committed to a Video -->
+  <div id="freedomView" class="hidden">
+    <div class="lock-banner" id="lockBanner">
+      COMMITMENT ACTIVE: Toggling Mystery Shelf won't save you. Finish the video—or beg for freedom.
+    </div>
+    <div class="chat-box" id="chatLog"></div>
+    <div class="input-row" id="inputRow">
+      <input type="text" id="pleaInput" placeholder="Beg to escape this video..." autocomplete="off" />
+      <button class="submit-btn" id="sendBtn">BEG</button>
+    </div>
   </div>
 
   <div class="footer">
-    <button class="reset-btn" id="resetBtn">[EMERGENCY RESET]</button>
+    <button class="reset-btn" id="emergencyResetBtn">[EMERGENCY RESET]</button>
   </div>
 
   <script src="popup.js"></script>
