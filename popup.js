@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   sendBtn.addEventListener('click', submitFreedomPlea);
   pleaInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submitFreedomPlea();
     }

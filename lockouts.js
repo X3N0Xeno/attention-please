@@ -70,6 +70,16 @@
     });
   }
 
+  function isTargetPleaInput(e) {
+    if (!e) return false;
+    const path = e.composedPath ? e.composedPath() : [e.target];
+    return path.some((el) => {
+      if (!el || !el.tagName) return false;
+      const tag = el.tagName.toUpperCase();
+      return (tag === 'INPUT' || tag === 'TEXTAREA') && el.id === 'pleaInput';
+    });
+  }
+
   function handleControlAction(controlKey, e, isKeyRepeat = false) {
     const bridge = getBridge();
     if (!bridge) return;
@@ -150,6 +160,14 @@
           }
         } else if (evtType === 'click') {
           handleControlAction(controlKey, e, false);
+          if (controlKey === 'seek') {
+            const vid = document.querySelector('video');
+            if (vid) {
+              setTimeout(() => {
+                bridge.clampSeekToHalfway?.(vid);
+              }, 0);
+            }
+          }
         }
       },
       true
@@ -181,10 +199,15 @@
   window.addEventListener(
     'wheel',
     (e) => {
-      if (isEventInsideModal(e)) return;
-
       const bridge = getBridge();
       if (!bridge) return;
+
+      if (bridge.isModalOpen()) {
+        if (!isEventInsideModal(e)) bridge.blockEvent(e);
+        return;
+      }
+
+      if (isEventInsideModal(e)) return;
       const commitment = bridge.getCommitment();
       if (!commitment || !getCurrentVideoId()) return;
 
@@ -204,17 +227,38 @@
     window.addEventListener(
       evtType,
       (e) => {
-        if (isEventInsideModal(e)) return;
-
         const bridge = getBridge();
-        if (!bridge || bridge.isUserTyping(e)) return;
+        if (!bridge) return;
 
         if (bridge.isModalOpen()) {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          if (evtType !== 'keyup') e.preventDefault();
+          const inPleaInput = isTargetPleaInput(e);
+
+          if (inPleaInput) {
+            // User is typing in the plea text area during begging
+            if (e.key === 'Enter') {
+              // Enter is for submission
+              bridge.blockEvent(e);
+              if (evtType === 'keydown') {
+                window.AP_Modals?.submitCurrentPlea?.();
+              }
+            }
+            // For other typing keys: allow them to reach the text area,
+            // but the text area's own listeners will prevent them from bubbling to YouTube.
+            return;
+          }
+
+          // Any other key event anywhere while begging modal is open MUST NOT affect the page!
+          bridge.blockEvent(e);
+          if (e.key === 'Enter' && evtType === 'keydown') {
+            window.AP_Modals?.submitCurrentPlea?.();
+          } else if (evtType === 'keydown') {
+            window.AP_Modals?.focusInput?.();
+          }
           return;
         }
+
+        if (isEventInsideModal(e)) return;
+        if (bridge.isUserTyping(e)) return;
 
         const commitment = bridge.getCommitment();
         if (!commitment || !getCurrentVideoId()) return;
@@ -260,6 +304,14 @@
           }
         } else if (evtType === 'keydown') {
           handleControlAction(matchedControl, e, e.repeat);
+          if (matchedControl === 'seek') {
+            const vid = document.querySelector('video');
+            if (vid) {
+              setTimeout(() => {
+                bridge.clampSeekToHalfway?.(vid);
+              }, 0);
+            }
+          }
         }
       },
       true
