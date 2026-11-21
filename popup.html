@@ -11,12 +11,14 @@
     }
     body {
       width: 340px;
-      background: #0e0e0e;
+      background-color: #0a0a0a;
+      background-image: radial-gradient(#242424 1px, transparent 1px);
+      background-size: 14px 14px;
       color: #e5e5e5;
       font-family: 'Consolas', 'Courier New', monospace;
-      padding: 16px;
-      border: 1px solid #2a2a2a;
-      transition: border-color 0.3s ease;
+      padding: 15px;
+      border: 2px solid #383838;
+      transition: border-color 0.25s ease;
     }
     body.stage-2 {
       border-color: #d946ef;
@@ -25,26 +27,27 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       padding-bottom: 10px;
-      border-bottom: 1px solid #242424;
+      border-bottom: 1px solid #2b2b2b;
     }
     .title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
       color: #fff;
     }
     .status-badge {
       font-size: 10px;
       padding: 2px 6px;
-      background: #1c1c1c;
-      border: 1px solid #333;
-      color: #888;
+      background: #141414;
+      border: 1px solid #525252;
+      color: #a3a3a3;
     }
     .status-badge.locked {
-      border-color: #d946ef;
-      color: #d946ef;
+      border-color: #ef4444;
+      color: #fca5a5;
+      background: #2a0a0a;
     }
     .hidden {
       display: none !important;
@@ -55,51 +58,64 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #161616;
-      border: 1px solid #2c2c2c;
-      padding: 12px;
+      background: #111111;
+      border: 1px solid #2e2e2e;
+      padding: 11px;
       margin-bottom: 12px;
+      gap: 10px;
     }
     .toggle-label {
       font-size: 12px;
-      color: #ddd;
+      font-weight: bold;
+      color: #e5e5e5;
     }
     .toggle-sub {
       font-size: 10px;
-      color: #777;
+      color: #888;
       margin-top: 3px;
+      line-height: 1.35;
     }
     .toggle-btn {
-      background: #222;
-      color: #aaa;
-      border: 1px solid #444;
+      background: #141414;
+      color: #a3a3a3;
+      border: 2px solid #404040;
+      box-shadow: 3px 3px 0px #262626;
       padding: 6px 12px;
       font-family: inherit;
       font-size: 11px;
       font-weight: bold;
       cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .toggle-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #262626;
     }
     .toggle-btn.active {
-      background: #fff;
-      color: #000;
-      border-color: #fff;
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+      box-shadow: 3px 3px 0px #525252;
+    }
+    .toggle-btn.active:active {
+      box-shadow: 1px 1px 0px #525252;
     }
 
-    /* Beg for Freedom Section (Shown Below Toggle When Locked) */
+    /* Beg for Freedom Section */
     .lock-banner {
-      background: #181818;
-      border-left: 2px solid #d946ef;
+      background: #180d1c;
+      border-left: 3px solid #d946ef;
       padding: 8px 10px;
       font-size: 11px;
-      color: #ccc;
+      color: #f0abfc;
       margin-bottom: 10px;
       line-height: 1.4;
     }
     .chat-box {
       height: 145px;
       overflow-y: auto;
-      background: #121212;
-      border: 1px solid #262626;
+      background: #0e0e0e;
+      border: 1px solid #2e2e2e;
       padding: 10px;
       margin-bottom: 10px;
       display: flex;
@@ -109,29 +125,31 @@
       line-height: 1.4;
     }
     .msg-ai {
-      background: #1a1a1a;
+      background: #161616;
       padding: 6px 8px;
-      border-left: 2px solid #666;
+      border-left: 3px solid #666;
       color: #e5e5e5;
     }
     body.stage-2 .msg-ai {
+      background: #180d1c;
       border-left-color: #d946ef;
     }
     .msg-user {
       align-self: flex-end;
-      background: #282828;
+      background: #222;
+      border: 1px solid #383838;
       padding: 5px 8px;
       color: #fff;
     }
     .input-row {
       display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     input {
       flex: 1;
-      background: #161616;
-      border: 1px solid #333;
+      background: #111;
+      border: 1px solid #3a3a3a;
       color: #fff;
       padding: 7px 9px;
       font-family: inherit;
@@ -139,17 +157,23 @@
       outline: none;
     }
     input:focus {
-      border-color: #666;
+      border-color: #d946ef;
     }
     .submit-btn {
-      background: #fff;
-      color: #000;
-      border: none;
+      background: #d946ef;
+      color: #000000;
+      border: 2px solid #d946ef;
+      box-shadow: 3px 3px 0px #701a75;
       padding: 7px 12px;
       font-family: inherit;
       font-size: 11px;
       font-weight: bold;
       cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .submit-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #701a75;
     }
 
     /* Footer */
@@ -157,12 +181,12 @@
       display: flex;
       justify-content: flex-end;
       padding-top: 8px;
-      border-top: 1px solid #1e1e1e;
+      border-top: 1px solid #222;
     }
     .reset-btn {
       background: transparent;
       border: none;
-      color: #555;
+      color: #666;
       font-family: inherit;
       font-size: 10px;
       cursor: pointer;
@@ -183,7 +207,7 @@
     <div class="toggle-row">
       <div>
         <div class="toggle-label">Mystery Shelf</div>
-        <div class="toggle-sub">Suppress thumbnails & randomize clicks</div>
+        <div class="toggle-sub">Suppress thumbnails &amp; randomize clicks</div>
       </div>
       <button class="toggle-btn" id="toggleMysteryBtn">OFF</button>
     </div>

@@ -17,8 +17,13 @@
     {
       "matches": ["*://*.youtube.com/*"],
       "css": ["styles.css"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
+      "js": [
+        "state.js",
+        "modals.js",
+        "feed.js",
+        "content.js"
+      ],
+      "run_at": "document_start"
     }
   ]
 }
