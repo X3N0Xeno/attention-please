@@ -1,12 +1,16 @@
 (() => {
   let modalOpen = false;
   let hostEl = null;
+  let activeSubmitPlea = null;
+  let activeFocusInput = null;
 
   function closeModal() {
     if (hostEl) {
       hostEl.remove();
       hostEl = null;
     }
+    activeSubmitPlea = null;
+    activeFocusInput = null;
     modalOpen = false;
   }
 
@@ -529,6 +533,11 @@
       }
     }
 
+    activeSubmitPlea = submitPlea;
+    activeFocusInput = () => {
+      if (pleaInput.isConnected && !pleaInput.disabled) pleaInput.focus();
+    };
+
     sendBtn.addEventListener('click', submitPlea);
     pleaInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -685,6 +694,8 @@
     close: closeModal,
     isOpen: () => modalOpen,
     getHost: () => hostEl,
+    submitCurrentPlea: () => activeSubmitPlea?.(),
+    focusInput: () => activeFocusInput?.(),
     showNutritionFacts
   };
 })();
