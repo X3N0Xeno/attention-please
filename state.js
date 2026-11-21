@@ -6,13 +6,29 @@
 
   function createDefaultControls() {
     return {
-      playback: { usesRemaining: 1, exhausted: false, session: null },
-      volume: { usesRemaining: 1, exhausted: false, session: null },
-      seek: { usesRemaining: 1, exhausted: false, session: null },
-      fullscreen: { usesRemaining: 1, exhausted: false, session: null },
-      settings: { usesRemaining: 1, exhausted: false, session: null },
-      freedom: { usesRemaining: 0, exhausted: false, session: null }
+      playback:   { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      volume:     { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      seek:       { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      fullscreen: { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      theater:    { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      settings:   { usesRemaining: 1, exhausted: false, session: null, isPremium: false },
+      freedom:    { usesRemaining: 0, exhausted: false, session: null, isPremium: false }
     };
+  }
+
+  function migrateControls(savedState) {
+    if (!savedState) return null;
+    const defaults = createDefaultControls();
+    if (!savedState.controls) {
+      savedState.controls = defaults;
+    } else {
+      for (const key of Object.keys(defaults)) {
+        if (!savedState.controls[key]) {
+          savedState.controls[key] = defaults[key];
+        }
+      }
+    }
+    return savedState;
   }
 
   function getVideoIdFromUrl(urlStr) {
@@ -98,10 +114,7 @@
       { mysteryShelfEnabled: false, commitmentState: null, lastReleasedVideoId: null },
       (data) => {
         onVisualChange(data.mysteryShelfEnabled, false);
-        if (data.commitmentState && !data.commitmentState.controls?.playback) {
-          data.commitmentState.controls = createDefaultControls();
-        }
-        commitment = data.commitmentState;
+        commitment = migrateControls(data.commitmentState);
         lastReleasedVideoId = data.lastReleasedVideoId || null;
         stateLoaded = true;
         enforceCommitmentOnRoute();
@@ -121,7 +134,7 @@
       }
 
       if (changes.commitmentState && !ignoreNextStorageSync) {
-        const nextCommitment = changes.commitmentState.newValue || null;
+        const nextCommitment = migrateControls(changes.commitmentState.newValue || null);
         if (!nextCommitment && commitment?.activeVideoId && !lastReleasedVideoId) {
           lastReleasedVideoId = commitment.activeVideoId;
         }

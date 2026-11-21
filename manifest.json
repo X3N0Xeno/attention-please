@@ -19,9 +19,10 @@
       "css": ["styles.css"],
       "js": [
         "state.js",
-        "modals.js",
+        "modal.js",
         "feed.js",
-        "content.js"
+        "content.js",
+        "lockouts.js"
       ],
       "run_at": "document_start"
     }
