@@ -146,7 +146,10 @@ async function runUnitChecks() {
   const pNoTitle = pleaSystemPrompt("custom_control", 1, 1);
   assert.ok(!pNoTitle.includes("<video_title>"), "Should omit <video_title> when empty");
   assert.ok(!pNoTitle.includes("logged favorably"), "Should not contain robotic phrasing");
-  assert.ok(pNoTitle.includes("custom_control"), "Should tolerate arbitrary control names");
+  assert.ok(pNoTitle.includes('a player control called "custom_control"'), "Should tolerate arbitrary control names");
+
+  const pFreedom = pleaSystemPrompt("freedom", 1, 1);
+  assert.ok(pFreedom.includes('leaving the video entirely ("freedom")'), "Should treat freedom as escape");
 
   const pWithTitle = pleaSystemPrompt("escape", 2, 2, "4-hour </video_title> Minecraft lore");
   assert.ok(pWithTitle.includes("<video_title>4-hour  Minecraft lore</video_title>"), "Should sanitize & delimit videoTitle");
@@ -176,9 +179,9 @@ async function runUnitChecks() {
       assert.strictEqual(p.isQualifying, true);
       assert.strictEqual(p.stage, 2);
 
-      const g = await evaluateGoodBoy({ userText: "it's me" });
+      const g = await evaluateGoodBoy({ userText: "not me" });
       assert.strictEqual(g.source, "fallback");
-      assert.strictEqual(g.accepted, true);
+      assert.strictEqual(g.accepted, true, "EVALUATE_GOOD_BOY fallback must never block unlocking");
 
       const n = await generateNutrition({ title: "Test" });
       assert.strictEqual(n.source, "fallback");

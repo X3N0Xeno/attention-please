@@ -40,7 +40,7 @@ Judges a single begging plea and returns an in-character reply. The AI **never**
 - **Request `payload`:**
   ```js
   {
-    controlName: string,       // e.g. "playback", "escape", or any locked control name from Laptop 3
+    controlName: string,       // playback, volume, seek, fullscreen, theater, settings, freedom / escape (unknown names also work)
     userText: string,          // current plea
     attemptNumber: number,     // 1-based; 1 -> stage 1 (Mommy - initial), 2+ -> stage 2 (Mommy - escalated)
     history: [                 // previous turns only (current userText is deduped if included)
@@ -80,7 +80,7 @@ Final confirmation gate before closing the plea modal. Once `validPleas >= 3`, `
     source: "gemini" | "mock" | "fallback"
   }
   ```
-- **Fallback behavior:** On any Gemini error, `heuristicGoodBoy()` checks for non-negated self-referential phrasing (`me`, `I am`, `it's me`, `myself`, etc.).
+- **Fallback behavior:** On any Gemini error (429, timeout, bad JSON, missing config), `evaluateGoodBoy()` always returns `{ accepted: true, ... }` (`source: "fallback"`) so it can never block unlocking. In `USE_MOCK: true` mode, `heuristicGoodBoy()` checks for non-negated self-referential phrasing (`me`, `I am`, `it's me`, `myself`, etc.).
 
 ---
 
