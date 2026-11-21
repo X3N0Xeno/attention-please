@@ -122,6 +122,10 @@ async function runUnitChecks() {
   assert.strictEqual(typeof hpNan.reply, "string");
   assert.ok(hpNan.reply.length > 0, "NaN attemptNumber must still produce a reply");
 
+  assert.strictEqual(heuristicPlea("LET ME PAUSE RIGHT NOW!!", 1).isQualifying, false, "ALL-CAPS demand must not qualify");
+  assert.strictEqual(heuristicPlea("PAUSE IT PLEASE NOW", 2).isQualifying, false, "ALL-CAPS bossy please must not qualify");
+  assert.strictEqual(heuristicPlea("I'M SO SORRY MOMMY PLEASE!!", 2).isQualifying, true, "ALL-CAPS frantic apology should qualify");
+
   // 3. heuristicGoodBoy edge cases
   for (const good of ["me", "ME!!", "I am", "i'm a good boy", "it's me mommy", "myself"]) {
     assert.strictEqual(heuristicGoodBoy(good).accepted, true, `Expected heuristicGoodBoy("${good}") = true`);
