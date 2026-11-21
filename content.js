@@ -25,7 +25,7 @@
         if (!document.documentElement.classList.contains('ap-mystery-on')) return;
         if (!(e.target instanceof Element)) return;
         const card = e.target.closest(
-          'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model'
+          'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytd-reel-item-renderer'
         );
         if (card) {
           e.stopPropagation();
@@ -52,7 +52,7 @@
 
   function getVideoIdFromUrl(urlStr) {
     try {
-      const u = new URL(urlStr);
+      const u = new URL(urlStr, location.origin);
       if (u.pathname === '/watch') {
         return u.searchParams.get('v');
       }
@@ -152,7 +152,65 @@
     }
   }, 500);
 
-  // --- 3. Helper: Check if User is Typing ---
+  // --- 3. Mystery Shelf Random Video Click Hijacker ---
+  function pickRandomVisibleVideoUrl(excludeVideoId) {
+    const anchors = document.querySelectorAll('a[href*="/watch?v="]');
+    const candidates = new Set();
+
+    anchors.forEach((a) => {
+      const id = getVideoIdFromUrl(a.href);
+      if (id && id !== excludeVideoId) {
+        candidates.add(`https://www.youtube.com/watch?v=${id}`);
+      }
+    });
+
+    const pool = Array.from(candidates);
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function handleMysteryFeedClick(e) {
+    if (modalOpen) return;
+    if (!document.documentElement.classList.contains('ap-mystery-on')) return;
+    if (!(e.target instanceof Element)) return;
+
+    // Ignore clicks on player controls, top masthead, or guide sidebar
+    if (e.target.closest('#movie_player, ytd-masthead, #guide')) return;
+
+    const videoCard = e.target.closest(
+      'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytd-reel-item-renderer, ytd-playlist-panel-video-renderer'
+    );
+    const link = e.target.closest('a[href*="/watch?v="], a[href*="/shorts/"]');
+
+    if (!videoCard && !link) return;
+
+    // Prevent YouTube SPA navigation & new-tab escapes (middle-click / Ctrl+click)
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    // Only trigger redirect on primary or middle click (ignore right-click context menu)
+    if (e.button !== 0 && e.button !== 1) return;
+
+    // If already committed to a video, route back to the locked video
+    if (commitment && commitment.activeVideoId) {
+      location.assign(`https://www.youtube.com/watch?v=${commitment.activeVideoId}`);
+      return;
+    }
+
+    const targetHref = link ? link.href : videoCard.querySelector('a[href*="/watch?v="], a[href*="/shorts/"]')?.href;
+    const clickedId = targetHref ? getVideoIdFromUrl(targetHref) : null;
+    const randomUrl = pickRandomVisibleVideoUrl(clickedId) || (clickedId ? `https://www.youtube.com/watch?v=${clickedId}` : null);
+
+    if (randomUrl) {
+      location.assign(randomUrl);
+    }
+  }
+
+  window.addEventListener('click', handleMysteryFeedClick, true);
+  window.addEventListener('auxclick', handleMysteryFeedClick, true);
+
+  // --- 4. Helper: Check if User is Typing ---
   function isUserTyping(e) {
     const path = e.composedPath ? e.composedPath() : [e.target];
     return path.some((el) => {
@@ -162,7 +220,7 @@
     });
   }
 
-  // --- 4. Total Keyboard Isolation While Modal is Open + Unified Play/Pause Lock ---
+  // --- 5. Total Keyboard Isolation While Modal is Open + Unified Play/Pause Lock ---
   function blockEventCompletely(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -216,8 +274,12 @@
       evtType,
       (e) => {
         if (modalOpen) {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
+          const path = e.composedPath ? e.composedPath() : [];
+          // Allow typing & Enter inside our Shadow DOM modal while blocking YouTube hotkeys
+          if (hostEl && path.includes(hostEl)) {
+            return;
+          }
+          blockEventCompletely(e);
           return;
         }
 
@@ -235,7 +297,7 @@
     );
   });
 
-  // --- 5. Deterministic Begging Logic + Prototype AI Responses ---
+  // --- 6. Deterministic Begging Logic + Prototype AI Responses ---
   function evaluatePleaPrototype(userText, attemptsUsed) {
     const text = userText.trim().toLowerCase();
     const politeMarkers = ['please', 'pretty please', 'beg', 'mommy', 'may i', 'let me', 'sorry', 'plz'];
@@ -267,7 +329,7 @@
     return { isQualifying, stage: 2, reply };
   }
 
-  // --- 6. Headerless Shadow DOM Begging Modal ---
+  // --- 7. Headerless Shadow DOM Begging Modal ---
   function closeModal() {
     if (hostEl) {
       hostEl.remove();
@@ -478,6 +540,7 @@
 
     sendBtn.addEventListener('click', submitPlea);
     pleaInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
       if (e.key === 'Enter') {
         e.preventDefault();
         submitPlea();
