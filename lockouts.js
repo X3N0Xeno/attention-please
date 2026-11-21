@@ -211,7 +211,7 @@
       const commitment = bridge.getCommitment();
       if (!commitment || !getCurrentVideoId()) return;
 
-      if (e.target instanceof Element && e.target.closest('#movie_player, video, .ytp-volume-area')) {
+      if (e.target instanceof Element && e.target.closest('.ytp-volume-area, .ytp-volume-panel, .ytp-mute-button')) {
         const state = commitment.controls.volume;
         if (!state || state.usesRemaining <= 0) {
           bridge.blockEvent(e);

@@ -94,15 +94,16 @@
   }
 
   function getCachedVideoContext() {
+    const currentVideoId = getVideoIdFromUrl(location.href) || '';
     const duration = (document.querySelector('.ytp-time-duration')?.textContent || '').trim();
-    if (cachedVideoContext) {
+    if (cachedVideoContext && (!currentVideoId || cachedVideoContext.videoId === currentVideoId)) {
       if (duration && (!cachedVideoContext.duration || cachedVideoContext.duration === '0:00')) {
         cachedVideoContext.duration = duration;
       }
       return { ...cachedVideoContext };
     }
     return {
-      videoId: getVideoIdFromUrl(location.href) || '',
+      videoId: currentVideoId,
       title: document.title.replace(/\s*-\s*YouTube\s*$/, '').trim(),
       channel: 'Unknown Creator',
       description: '',
@@ -174,6 +175,8 @@
         }
         commitment = nextCommitment;
         if (!commitment) {
+          cachedVideoContext = null;
+          cachingForVideoId = null;
           window.AP_Modals?.close();
         } else {
           enforceCommitmentOnRoute();

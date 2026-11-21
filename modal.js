@@ -31,17 +31,17 @@
 
     if (attemptsUsed === 1) {
       const denialMap = {
-        volume: 'Volume petition logged. Your auditory comfort is not guaranteed yet.',
-        fullscreen: 'Fullscreen petition logged. You have not earned HD yet.',
-        settings: 'Time dilation petition logged. Speed is not a right.'
+        volume: "Mmm, polite start, sweetheart. Tell Mommy why you need that volume so badly.",
+        fullscreen: "Asking nicely for fullscreen already? Keep talking sweet to me and we'll see.",
+        settings: "Look at those manners, honey. Convince Mommy why you deserve to touch the settings."
       };
       return {
         isQualifying,
         isAsmr,
         stage: 1,
         reply: isQualifying
-          ? (denialMap[controlKey] || 'Petition logged. Authorization threshold unmet. Submit further justification.')
-          : 'Access denied. Unformatted demand rejected. State your request properly.'
+          ? (denialMap[controlKey] || "Mmm, much better manners already. Keep talking nicely to me and we'll see.")
+          : "Excuse me? You're going to have to ask way nicer than that, baby."
       };
     }
 
@@ -540,14 +540,17 @@
     dismissBtn.addEventListener('click', closeModal);
   }
 
-  function generateFallbackNutrition(meta) {
-    const mins = parseInt(meta.duration.split(':')[0], 10) || 3;
+  function generateFallbackNutrition(meta = {}) {
+    const durStr = String(meta.duration || '0:00').trim();
+    const parts = durStr.split(':').map((n) => parseInt(n, 10) || 0);
+    const mins = (parts.length === 3 ? parts[0] * 60 + parts[1] : parts[0]) || 3;
+    const titleStr = String(meta.title || 'this video');
     return {
       caloriesWasted: `${Math.max(85, mins * 65)} kcal`,
       brainrotPercent: `${Math.min(99, 42 + mins * 7)}%`,
-      attentionDamage: mins > 8 ? 'Critical' : 'Moderate-to-Severe',
+      attentionDamage: mins > 8 ? 'Critical' : 'Moderate',
       emotionalAftertaste: 'Mild existential static',
-      verdict: `You just traded ${meta.duration} of your finite lifespan to "${meta.title.slice(0, 48)}".`
+      verdict: `You just traded ${durStr} of your finite lifespan to "${titleStr.slice(0, 48)}".`
     };
   }
 

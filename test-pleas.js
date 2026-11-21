@@ -57,8 +57,12 @@ async function withStubbedGemini(fakeFetch, fn) {
   const origWarn = sandbox.console.warn;
   const cfg = sandbox.getConfig();
   const origMock = cfg.USE_MOCK;
+  const origKey = cfg.GEMINI_API_KEY;
   try {
     cfg.USE_MOCK = false;
+    if (!cfg.GEMINI_API_KEY || cfg.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+      cfg.GEMINI_API_KEY = "test-stub-key";
+    }
     sandbox.fetch = fakeFetch;
     sandbox.console = { ...console, warn: () => {} }; // silence expected fallback warnings during test
     return await fn();
@@ -66,6 +70,7 @@ async function withStubbedGemini(fakeFetch, fn) {
     sandbox.fetch = origFetch;
     sandbox.console = { ...console, warn: origWarn };
     cfg.USE_MOCK = origMock;
+    cfg.GEMINI_API_KEY = origKey;
   }
 }
 
@@ -121,6 +126,10 @@ async function runUnitChecks() {
   const hpNan = heuristicPlea("please", NaN);
   assert.strictEqual(typeof hpNan.reply, "string");
   assert.ok(hpNan.reply.length > 0, "NaN attemptNumber must still produce a reply");
+
+  assert.strictEqual(heuristicPlea("LET ME PAUSE RIGHT NOW!!", 1).isQualifying, false, "ALL-CAPS demand must not qualify");
+  assert.strictEqual(heuristicPlea("PAUSE IT PLEASE NOW", 2).isQualifying, false, "ALL-CAPS bossy please must not qualify");
+  assert.strictEqual(heuristicPlea("I'M SO SORRY MOMMY PLEASE!!", 2).isQualifying, true, "ALL-CAPS frantic apology should qualify");
 
   // 3. heuristicGoodBoy edge cases
   for (const good of ["me", "ME!!", "I am", "i'm a good boy", "it's me mommy", "myself"]) {

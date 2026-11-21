@@ -25,11 +25,12 @@ api.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg.type === "PING") {
     const cfg = typeof CONFIG !== "undefined" ? CONFIG : { USE_MOCK: true, MODEL: null };
+    const mock = typeof isMockMode === "function" ? isMockMode() : Boolean(cfg.USE_MOCK);
     sendResponse({
       ok: true,
       data: {
         pong: true,
-        mock: Boolean(cfg.USE_MOCK),
+        mock,
         model: cfg.MODEL ?? null,
       },
     });
