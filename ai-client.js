@@ -4,22 +4,36 @@
 const GEMINI_URL = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
+const DEFAULT_CONFIG = { USE_MOCK: true };
+
+function getConfig() {
+  if (typeof CONFIG !== "undefined") return CONFIG;
+  if (!getConfig._warned) {
+    getConfig._warned = true;
+    console.warn(
+      "Attention, please!: CONFIG missing (config.js not loaded) — running in mock mode. Copy config.example.js to config.js to enable Gemini."
+    );
+  }
+  return DEFAULT_CONFIG;
+}
+
 async function callGemini({ system, contents, temperature = 0.4, timeoutMs = 8000, maxOutputTokens = 300 }) {
+  const cfg = getConfig();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const generationConfig = { responseMimeType: "application/json", temperature, maxOutputTokens };
   // Thinking adds latency and can eat the token budget. Set THINKING_BUDGET: 0 in config.js
   // for 2.5 Flash. If Gemini returns HTTP 400 about thinking, remove it from config.
-  if (typeof CONFIG.THINKING_BUDGET === "number") {
-    generationConfig.thinkingConfig = { thinkingBudget: CONFIG.THINKING_BUDGET };
+  if (typeof cfg.THINKING_BUDGET === "number") {
+    generationConfig.thinkingConfig = { thinkingBudget: cfg.THINKING_BUDGET };
   }
   try {
-    const res = await fetch(GEMINI_URL(CONFIG.MODEL || "gemini-2.5-flash"), {
+    const res = await fetch(GEMINI_URL(cfg.MODEL || "gemini-2.5-flash"), {
       method: "POST",
       signal: ctrl.signal,
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": CONFIG.GEMINI_API_KEY,
+        "x-goog-api-key": cfg.GEMINI_API_KEY,
       },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
@@ -119,10 +133,13 @@ Respond with ONLY this JSON, no markdown, no extra text:
 
 // Gemini wants turns starting with "user" and alternating roles. Normalize.
 function buildTurns(history, userText) {
-  let turns = (Array.isArray(history) ? history : []).slice(-6).map((h) => ({
-    role: h.role === "user" ? "user" : "model",
-    text: String(h.text ?? h.content ?? "").slice(0, 500),
-  }));
+  let turns = (Array.isArray(history) ? history : [])
+    .filter((h) => h && typeof h === "object")
+    .slice(-6)
+    .map((h) => ({
+      role: h.role === "user" ? "user" : "model",
+      text: String(h.text ?? h.content ?? "").slice(0, 500),
+    }));
   // caller may have already included the current message
   if (turns.length && turns[turns.length - 1].role === "user" && turns[turns.length - 1].text === String(userText).slice(0, 500)) {
     turns.pop();
@@ -139,7 +156,7 @@ function buildTurns(history, userText) {
 }
 
 async function evaluatePlea({ controlName = "escape", userText = "", attemptNumber = 1, history = [] } = {}) {
-  if (CONFIG.USE_MOCK) return { ...heuristicPlea(userText, attemptNumber), source: "mock" };
+  if (getConfig().USE_MOCK) return { ...heuristicPlea(userText, attemptNumber), source: "mock" };
 
   const stage = stageFor(attemptNumber);
   try {
@@ -199,7 +216,7 @@ Respond with ONLY this JSON, no markdown, no extra text:
 }
 
 async function evaluateGoodBoy({ userText = "" } = {}) {
-  if (CONFIG.USE_MOCK) return { ...heuristicGoodBoy(userText), source: "mock" };
+  if (getConfig().USE_MOCK) return { ...heuristicGoodBoy(userText), source: "mock" };
 
   try {
     const raw = await callGemini({
@@ -252,7 +269,7 @@ async function generateNutrition(context = {}) {
     emotionalAftertaste: "Mild regret, hint of curiosity",
     verdict: "Technically a video. Consume responsibly, or don't.",
   };
-  if (CONFIG.USE_MOCK) return { ...fallback, source: "mock" };
+  if (getConfig().USE_MOCK) return { ...fallback, source: "mock" };
 
   try {
     const raw = await callGemini({

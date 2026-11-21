@@ -15,13 +15,15 @@ async function getVideoContext() {
   };
 
   // YouTube is a SPA: after a click, the DOM/meta can still belong to the PREVIOUS page.
-  // Wait until the watch element reports the same video id as the URL.
+  // Wait until the watch element reports the same video id as the URL (skip on /shorts/).
   const vid = new URL(location.href).searchParams.get("v"); // null on /shorts/
-  for (let i = 0; i < 15; i++) {
-    const flexy = document.querySelector("ytd-watch-flexy");
-    const idOk = !vid || (flexy && flexy.getAttribute("video-id") === vid);
-    if (idOk && pick(["h1.ytd-watch-metadata"])) break;
-    await sleep(300);
+  if (vid) {
+    for (let i = 0; i < 15; i++) {
+      const flexy = document.querySelector("ytd-watch-flexy");
+      const idOk = flexy && flexy.getAttribute("video-id") === vid;
+      if (idOk && pick(["h1.ytd-watch-metadata"])) break;
+      await sleep(300);
+    }
   }
 
   // Comments load lazily (only after the user scrolls), so this is often empty. That's fine.
@@ -38,8 +40,8 @@ async function getVideoContext() {
     channel: pick(["#owner #channel-name a", "ytd-channel-name a"]) ||
              pick(["link[itemprop='name']"], "content"),
     description:
-      pick(["#description-inner", "ytd-text-inline-expander"]).slice(0, 800) ||
-      pick(["meta[name='description']"], "content"),
+      pick(["#description-inner", "ytd-text-inline-expander"]).replace(/\s+/g, " ").slice(0, 800) ||
+      pick(["meta[name='description']"], "content").replace(/\s+/g, " ").slice(0, 800),
     comments,
   };
 }

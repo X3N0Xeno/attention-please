@@ -2,6 +2,13 @@
 
 All LLM calls run in `background.js` (MV3 service worker on Chromium, `background.scripts` on Floorp). Content scripts and the popup communicate with it via `chrome.runtime.sendMessage` / `browser.runtime.sendMessage`.
 
+## Local Setup (Laptops 2 & 3)
+
+1. **Copy `config.example.js` to `config.js`** (gitignored — never commit `config.js`) and paste the shared `GEMINI_API_KEY`.
+2. Set `USE_MOCK: true` if you want instant offline replies while building UI, or `USE_MOCK: false` for live Gemini.
+3. If `config.js` is missing, the background worker still boots safely in **mock mode** and logs a `console.warn` reminder.
+4. **Floorp note:** After loading `manifest.json` via `about:debugging`, check `about:addons` → Permissions and make sure `https://generativelanguage.googleapis.com/*` is enabled.
+
 ## Envelope
 
 ```js
