@@ -159,14 +159,14 @@
     }
 
     const accessMap = {
-      playback: "Access denied. Play/Pause privilege has already been consumed.",
-      volume: "Access denied. Volume Control privilege exhausted. Justify your need for audio.",
-      seek: "Access denied. Seek privilege exhausted. You had one scrub.",
-      fullscreen: "Access denied. Fullscreen Mode is restricted. You want all of me? Say so properly.",
-      theater: "Access denied. Theatre Mode privilege has already been consumed.",
-      settings: "Access denied. Settings are sealed. Speed and captions are not free services."
+      playback: "Uh-uh, baby. You already used your one free pause. If you want another, you'll have to ask Mommy nicely.",
+      volume: "Hands off the volume, sweetheart. You already had your turn—tell Mommy why your ears deserve mercy.",
+      seek: "Trying to skip ahead already, honey? You had one scrub. Ask nicely if you want another.",
+      fullscreen: "Want all of me in fullscreen, baby? You're going to have to beg a little prettier than that.",
+      theater: "Getting greedy with the layout, sweetheart? You used your freebie—ask Mommy properly.",
+      settings: "No touching the speed or captions, honey. Ask nicely if you think you've earned it."
     };
-    return accessMap[controlKey] || `Access denied. ${displayLabel} privilege has already been consumed.`;
+    return accessMap[controlKey] || `Uh-uh, baby. You already used your free ${displayLabel}—ask Mommy nicely if you want another.`;
   }
 
   function openBegModal(controlKey = 'playback', context = {}) {
@@ -343,7 +343,7 @@
           <div class="body">
             <div class="chat" id="chatLog"></div>
             <div class="controls">
-              <input type="text" id="pleaInput" placeholder="Submit petition..." autocomplete="off" />
+              <input type="text" id="pleaInput" placeholder="Ask Mommy nicely..." autocomplete="off" />
               <button id="sendBtn">SUBMIT</button>
               <button class="close-btn" id="dismissBtn">GIVE UP</button>
             </div>
