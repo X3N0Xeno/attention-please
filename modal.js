@@ -12,6 +12,8 @@
     activeSubmitPlea = null;
     activeFocusInput = null;
     modalOpen = false;
+    currentSubmitPlea = null;
+    currentPleaInput = null;
   }
 
   function formatControlLabel(controlKey, context = {}) {
@@ -222,26 +224,28 @@
           font-family: 'Consolas', 'Courier New', monospace;
         }
         .box {
-          width: 430px;
+          width: 660px;
+          max-width: 92vw;
           background: #0a0a0a;
-          border: 2px solid #404040;
+          border: 2px solid #484848;
           box-shadow: 6px 6px 0px #000000, 0 24px 60px rgba(0, 0, 0, 0.9);
           color: #e5e5e5;
           transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
         .box.stage-2 {
           border-color: #d946ef;
-          box-shadow: 6px 6px 0px #701a75, 0 0 35px rgba(217, 70, 239, 0.2);
+          box-shadow: 6px 6px 0px #701a75, 0 0 35px rgba(217, 70, 239, 0.25);
         }
         .hud-bar {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 7px 14px;
+          padding: 12px 20px;
           background: #141414;
           border-bottom: 1px solid #262626;
-          font-size: 10px;
-          letter-spacing: 0.08em;
+          font-size: 14px;
+          font-weight: bold;
+          letter-spacing: 0.1em;
           color: #888;
         }
         .box.stage-2 .hud-bar {
@@ -251,10 +255,10 @@
         }
         .dot {
           display: inline-block;
-          width: 6px;
-          height: 6px;
+          width: 9px;
+          height: 9px;
           background: #ef4444;
-          margin-right: 6px;
+          margin-right: 8px;
         }
         .box.stage-2 .dot {
           background: #d946ef;
@@ -264,22 +268,23 @@
           0%, 100% { opacity: 1; }
           50% { opacity: 0.25; }
         }
-        .body { padding: 16px; }
+        .body { padding: 24px 26px; }
         .chat {
-          min-height: 74px;
-          max-height: 210px;
+          min-height: 120px;
+          max-height: 320px;
           overflow-y: auto;
-          font-size: 13px;
-          line-height: 1.45;
-          margin-bottom: 14px;
+          font-size: 17px;
+          line-height: 1.55;
+          margin-bottom: 20px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 12px;
         }
         .msg-ai {
           background: #141414;
-          padding: 9px 11px;
-          border-left: 3px solid #666;
+          padding: 14px 18px;
+          border-left: 4px solid #666;
+          font-size: 17px;
         }
         .box.stage-2 .msg-ai {
           background: #180d1c;
@@ -289,52 +294,100 @@
         .msg-user {
           align-self: flex-end;
           background: #222;
-          border: 1px solid #383838;
-          padding: 6px 10px;
+          border: 1.5px solid #383838;
+          padding: 12px 18px;
           color: #fff;
+          font-size: 17px;
         }
-        .controls { display: flex; gap: 8px; }
-        input {
-          flex: 1;
-          background: #111;
-          border: 1px solid #3a3a3a;
-          color: #fff;
-          padding: 8px 10px;
-          font-family: inherit;
-          font-size: 12px;
+        .controls {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        textarea {
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 86px;
+          background: #141414;
+          border: 2px solid #555555;
+          color: #ffffff;
+          padding: 14px 18px;
+          font-family: 'Consolas', 'Courier New', monospace;
+          font-size: 17px;
+          font-weight: 600;
+          line-height: 1.5;
+          resize: none;
           outline: none;
+          border-radius: 4px;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        input:focus { border-color: #fff; }
-        .box.stage-2 input:focus { border-color: #d946ef; }
+        textarea::placeholder {
+          color: #888888;
+          font-style: italic;
+          font-weight: normal;
+        }
+        textarea:focus {
+          border-color: #ffffff;
+          background: #1a1a1a;
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+        .box.stage-2 textarea {
+          border-color: #9d174d;
+          background: #180a1c;
+          color: #fdf4ff;
+        }
+        .box.stage-2 textarea::placeholder {
+          color: #c084fc;
+        }
+        .box.stage-2 textarea:focus {
+          border-color: #d946ef;
+          background: #230d29;
+          box-shadow: 0 0 16px rgba(217, 70, 239, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+        .action-row {
+          display: flex;
+          gap: 12px;
+          width: 100%;
+        }
         button {
           background: #ffffff;
           color: #000000;
           border: 2px solid #ffffff;
-          box-shadow: 3px 3px 0px #525252;
-          padding: 7px 13px;
+          box-shadow: 4px 4px 0px #525252;
+          padding: 13px 24px;
           font-family: inherit;
-          font-size: 11px;
+          font-size: 14px;
           font-weight: bold;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.08em;
           cursor: pointer;
           transition: transform 0.08s ease, box-shadow 0.08s ease;
         }
         button:active {
           transform: translate(2px, 2px);
-          box-shadow: 1px 1px 0px #525252;
+          box-shadow: 2px 2px 0px #525252;
+        }
+        #sendBtn {
+          flex: 1;
         }
         .box.stage-2 #sendBtn {
           background: #d946ef;
           border-color: #d946ef;
           color: #000;
-          box-shadow: 3px 3px 0px #701a75;
+          box-shadow: 4px 4px 0px #701a75;
         }
         .close-btn {
           background: transparent;
-          color: #888;
-          border: 1px solid #333;
+          color: #a3a3a3;
+          border: 1px solid #444;
           box-shadow: none;
           font-weight: normal;
+          padding: 13px 20px;
+          font-size: 13px;
+        }
+        .close-btn:hover {
+          color: #ffffff;
+          border-color: #666;
         }
         .close-btn:active { transform: none; box-shadow: none; }
       </style>
@@ -347,9 +400,11 @@
           <div class="body">
             <div class="chat" id="chatLog"></div>
             <div class="controls">
-              <input type="text" id="pleaInput" placeholder="Ask Mommy nicely..." autocomplete="off" />
-              <button id="sendBtn">SUBMIT</button>
-              <button class="close-btn" id="dismissBtn">GIVE UP</button>
+              <textarea id="pleaInput" placeholder="Ask Mommy nicely..." rows="2" autocomplete="off" spellcheck="false"></textarea>
+              <div class="action-row">
+                <button id="sendBtn">SUBMIT [ENTER]</button>
+                <button class="close-btn" id="dismissBtn">GIVE UP</button>
+              </div>
             </div>
           </div>
         </div>
@@ -375,8 +430,10 @@
     }
 
     function removeInputControls() {
-      pleaInput.remove();
-      sendBtn.remove();
+      currentSubmitPlea = null;
+      currentPleaInput = null;
+      if (pleaInput) pleaInput.remove();
+      if (sendBtn) sendBtn.remove();
     }
 
     function addMessage(text, isUser, isAsmr = false) {
@@ -539,13 +596,81 @@
     };
 
     sendBtn.addEventListener('click', submitPlea);
-    pleaInput.addEventListener('keydown', (e) => {
+
+    function handlePleaKey(e) {
       e.stopPropagation();
+      e.stopImmediatePropagation();
       if (e.key === 'Enter') {
         e.preventDefault();
-        submitPlea();
+        if (e.type === 'keydown') {
+          submitPlea();
+        }
+      }
+    }
+
+    ['keydown', 'keypress', 'keyup'].forEach((type) => {
+      pleaInput.addEventListener(type, handlePleaKey, true);
+      pleaInput.addEventListener(type, handlePleaKey, false);
+    });
+
+    ['keydown', 'keypress', 'keyup'].forEach((type) => {
+      shadow.addEventListener(type, (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.type === 'keydown') {
+            submitPlea();
+          }
+        }
+      }, true);
+      shadow.addEventListener(type, (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.type === 'keydown') {
+            submitPlea();
+          }
+        }
+      }, false);
+      hostEl.addEventListener(type, (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.type === 'keydown') {
+            submitPlea();
+          }
+        }
+      }, true);
+      hostEl.addEventListener(type, (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.type === 'keydown') {
+            submitPlea();
+          }
+        }
+      }, false);
+    });
+
+    ['pointerdown', 'mousedown', 'click', 'dblclick'].forEach((type) => {
+      hostEl.addEventListener(type, (e) => {
+        e.stopPropagation();
+      });
+      shadow.addEventListener(type, (e) => {
+        e.stopPropagation();
+      });
+    });
+
+    modalBox.addEventListener('click', (e) => {
+      if (e.target !== dismissBtn && e.target !== sendBtn && pleaInput && pleaInput.isConnected) {
+        pleaInput.focus();
       }
     });
+
     dismissBtn.addEventListener('click', closeModal);
   }
 
@@ -694,8 +819,14 @@
     close: closeModal,
     isOpen: () => modalOpen,
     getHost: () => hostEl,
-    submitCurrentPlea: () => activeSubmitPlea?.(),
-    focusInput: () => activeFocusInput?.(),
-    showNutritionFacts
+    showNutritionFacts,
+    submitCurrentPlea: () => {
+      if (currentSubmitPlea) currentSubmitPlea();
+    },
+    focusInput: () => {
+      if (currentPleaInput && currentPleaInput.isConnected) {
+        currentPleaInput.focus();
+      }
+    }
   };
 })();
