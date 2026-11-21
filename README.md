@@ -1,6 +1,7 @@
 Attention, please!
 
 “You clicked it. Now live with it.”
+Built by Hey you know what’s a good weekend side quest? I think I have an IDE.A. Say that again? IDE.A
 
 Attention, please! is an anti-productivity Chrome extension that turns YouTube into a mystery-box hostage situation. Every thumbnail becomes a blank grey box, every click is a gamble, every player control works only once, and if you want to pause, adjust the volume, or leave—you’ll have to beg an AI for permission.
 
@@ -93,3 +94,7 @@ feat/mystery-and-ui (styles.css, popup.html, popup.js, UI/Randomizer in content.
 feat/control-lockouts (lockouts.js, wiring in content.js) — chrome.storage.local state engine, 5-control interception, keyboard traps, and bypass hardening.
 
 To test local changes, reload the extension at chrome://extensions/ and refresh your YouTube tab.
+
+Team
+
+Created by Hey you know what’s a good weekend side quest? I think I have an IDE.A. Say that again? IDE.A.
