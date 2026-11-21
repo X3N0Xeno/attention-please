@@ -41,11 +41,13 @@ const {
   heuristicPlea,
   heuristicGoodBoy,
   pleaSystemPrompt,
+  parseDurationMinutes,
+  computeAttentionDamage,
   evaluatePlea,
   evaluateGoodBoy,
   generateNutrition,
 } = vm.runInContext(
-  "({ buildTurns, clamp, str, parseJsonLoose, stageFor, heuristicPlea, heuristicGoodBoy, pleaSystemPrompt, evaluatePlea, evaluateGoodBoy, generateNutrition })",
+  "({ buildTurns, clamp, str, parseJsonLoose, stageFor, heuristicPlea, heuristicGoodBoy, pleaSystemPrompt, parseDurationMinutes, computeAttentionDamage, evaluatePlea, evaluateGoodBoy, generateNutrition })",
   sandbox
 );
 
@@ -231,15 +233,31 @@ async function runUnitChecks() {
       }),
     }),
     async () => {
-      const label = await generateNutrition({ title: "Test", channel: "Ch", description: "", comments: [] });
+      const label = await generateNutrition({ title: "Test", channel: "Ch", duration: "40:00", description: "", comments: [] });
       assert.strictEqual(label.source, "gemini");
       assert.strictEqual(label.caloriesWasted, 2000);
       assert.strictEqual(label.brainrotPercent, 0);
-      assert.strictEqual(label.attentionDamage, "Moderate");
+      assert.strictEqual(label.attentionDamage, "Minimal");
       assert.strictEqual(label.emotionalAftertaste, "Salty");
       assert.strictEqual(label.verdict.length, 200);
     }
   );
+
+  // 9b. parseDurationMinutes & computeAttentionDamage (Duration x Brainrot ratio)
+  assert.strictEqual(parseDurationMinutes("0:45"), 0.75);
+  assert.strictEqual(parseDurationMinutes("12:30"), 12.5);
+  assert.strictEqual(parseDurationMinutes("1:10:00"), 70);
+  assert.strictEqual(parseDurationMinutes("0:00"), null);
+  assert.strictEqual(parseDurationMinutes(""), null);
+  assert.strictEqual(parseDurationMinutes(null), null);
+
+  assert.strictEqual(computeAttentionDamage(5, "40:00"), "Minimal", "Long + substantive -> Minimal");
+  assert.strictEqual(computeAttentionDamage(5, "2:00"), "Low", "Short + substantive -> Low");
+  assert.strictEqual(computeAttentionDamage(40, "15:00"), "Moderate", "Mid-length + mid brainrot -> Moderate");
+  assert.strictEqual(computeAttentionDamage(90, "0:45"), "Severe", "Short + brainrot -> Severe");
+  assert.strictEqual(computeAttentionDamage(80, "40:00"), "Critical", "Long + high brainrot -> Critical");
+  assert.strictEqual(computeAttentionDamage(95, "40:00"), "Terminal", "Long + pure brainrot -> Terminal");
+  assert.strictEqual(computeAttentionDamage(5, null), "Minimal", "Unknown duration degrades cleanly");
 
   // 10. background.js routing & missing-config.js resilience
   await testBackgroundRouting();
@@ -343,6 +361,7 @@ const NUTRITION_SAMPLES = [
     videoId: "sample-greece",
     title: "you're studying like in ancient greece (a playlist)",
     channel: "nobody",
+    duration: "52:14",
     description: "Ancient Greek lyre music for studying, reading, and pretending you understand philosophy.",
     comments: ["I failed my math exam but I feel like Plato", "This cured my 3am panic"],
   },
@@ -350,6 +369,7 @@ const NUTRITION_SAMPLES = [
     videoId: "sample-lore",
     title: "I Spent 100 Days Building a Toaster in Minecraft (GONE WRONG)",
     channel: "BlockChaos",
+    duration: "44:10",
     description: "Today I trapped 50 friends inside a giant toaster for 100 days. Subscribe!",
     comments: ["Why did I watch all 45 minutes of this at 2am", "My brain is officially toast"],
   },

@@ -265,6 +265,32 @@ async function evaluateGoodBoy({ userText = "" } = {}) {
 
 // ---------- GENERATE_NUTRITION ----------
 
+function parseDurationMinutes(duration) {
+  if (typeof duration !== "string") return null;
+  const parts = duration.trim().split(":").map(Number);
+  if (parts.length < 2 || parts.length > 3 || parts.some((n) => !Number.isFinite(n) || n < 0)) {
+    return null;
+  }
+  const secs = parts.length === 3
+    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : parts[0] * 60 + parts[1];
+  return secs > 0 ? secs / 60 : null;
+}
+
+function computeAttentionDamage(brainrotPercent, duration) {
+  const b = clamp(brainrotPercent, 0, 100, 50) / 100;
+  const mins = parseDurationMinutes(duration);
+  const lengthFactor = mins == null ? 0.5 : Math.min(1, mins / 35);
+  const shortFormPenalty = (1 - lengthFactor) * 0.25;
+  const score = b * (0.70 + 0.35 * lengthFactor) + shortFormPenalty * (1 - b);
+  if (score < 0.18) return "Minimal";
+  if (score < 0.34) return "Low";
+  if (score < 0.50) return "Moderate";
+  if (score < 0.72) return "Severe";
+  if (score < 0.88) return "Critical";
+  return "Terminal";
+}
+
 function nutritionSystemPrompt(ctx) {
   const c = (v, n) => String(v ?? "").slice(0, n);
   return `You write satirical FDA-style "Nutrition Facts" for a video the user just watched. Be witty and specific to the video's content.
@@ -274,7 +300,7 @@ Respond with ONLY this JSON:
 {
  "caloriesWasted": integer 0-2000,
  "brainrotPercent": integer 0-100,
- "attentionDamage": "severity rating, 1-3 words (e.g. Minimal, Mild, Moderate, Severe, Critical, Terminal)",
+ "attentionDamage": "severity rating, 1-3 words (e.g. Minimal, Low, Moderate, Severe, Critical, Terminal)",
  "emotionalAftertaste": "short phrase, max 8 words",
  "verdict": "one sentence, max 20 words"
 }
@@ -282,6 +308,7 @@ Respond with ONLY this JSON:
 <video>
 Title: ${c(ctx.title, 200)}
 Channel: ${c(ctx.channel, 100)}
+Duration: ${c(ctx.duration || "unknown", 20)}
 Description: ${c(ctx.description, 800)}
 Comments: ${c((ctx.comments || []).join(" | "), 800)}
 </video>`;
@@ -291,7 +318,7 @@ async function generateNutrition(context = {}) {
   const fallback = {
     caloriesWasted: 420,
     brainrotPercent: 69,
-    attentionDamage: "Moderate",
+    attentionDamage: computeAttentionDamage(69, context.duration),
     emotionalAftertaste: "Mild regret, hint of curiosity",
     verdict: "Technically a video. Consume responsibly, or don't.",
   };
@@ -306,10 +333,11 @@ async function generateNutrition(context = {}) {
     });
     const j = parseJsonLoose(raw);
     if (!j) throw new Error("unparseable");
+    const brainrotPercent = clamp(j.brainrotPercent, 0, 100, fallback.brainrotPercent);
     return {
       caloriesWasted: clamp(j.caloriesWasted, 0, 2000, fallback.caloriesWasted),
-      brainrotPercent: clamp(j.brainrotPercent, 0, 100, fallback.brainrotPercent),
-      attentionDamage: str(j.attentionDamage, fallback.attentionDamage, 80),
+      brainrotPercent,
+      attentionDamage: computeAttentionDamage(brainrotPercent, context.duration),
       emotionalAftertaste: str(j.emotionalAftertaste, fallback.emotionalAftertaste, 80),
       verdict: str(j.verdict, fallback.verdict, 200),
       source: "gemini",

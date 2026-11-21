@@ -95,7 +95,8 @@ Generates satirical FDA-style Nutrition Facts for a finished video.
     title: string,
     channel: string,
     description: string,
-    comments: string[]
+    comments: string[],
+    duration?: string    // optional player duration (e.g. "12:34" or "1:05:20"); combined with brainrotPercent to compute attentionDamage
   }
   ```
   > **Important for Laptop 2:** Call `await getVideoContext()` early (when playback starts) and cache it, then pass the cached object to `GENERATE_NUTRITION` on the `ended` event. By `ended`, YouTube autoplay may have already mutated the DOM.
