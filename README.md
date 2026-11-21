@@ -49,15 +49,22 @@ Click **"Consume Another Mystery Video"** to reset the state and spin the wheel 
 ## Architecture & Project Structure
 
 ```text
-attention-please-main/
-├── manifest.json   # Extension configuration, permissions, and service worker setup
-├── content.js      # Feed randomizer, YouTube DOM masking, Shadow DOM modals, video end hooks
-├── styles.css      # Grey loading-skeleton masking, hidden text, and Shadow DOM modal styling
-├── popup.html      # Extension popup markup (Mystery Shelf toggle + Beg for Freedom chat)
-├── popup.js        # Popup state handling and escape begging flow
-├── lockouts.js     # Player control interception, keyboard traps, and chrome.storage.local state
-├── background.js   # Background service worker routing chrome.runtime.onMessage AI requests
-└── ai-client.js    # LLM prompts, structured JSON parsing, and video metadata scraping
+attention-please/
+├── manifest.json     # Extension configuration, permissions, and service worker setup
+├── background.js     # Background worker routing chrome.runtime.onMessage AI requests
+├── ai-client.js      # LLM prompts, Gemini API calls, JSON parsing, and fallbacks
+├── config.example.js # Template config (copy to gitignored config.js and add your key)
+├── video-context.js  # Content script exposing getVideoContext() for DOM metadata scraping
+├── state.js          # Persistent chrome.storage.local commitment state and cached video context
+├── modal.js          # Shadow DOM begging modal and FDA-style Nutrition Facts modal
+├── feed.js           # Mystery Shelf visual masking and random-video click hijacking
+├── content.js        # Module boot, SPA route polling, video end hook, and lockouts bridge
+├── lockouts.js       # Player control interception, keyboard traps, and fleeing Skip Ad button
+├── styles.css        # Grey loading-skeleton masking and hidden text styles
+├── popup.html        # Extension popup markup (Mystery Shelf toggle + Beg for Freedom chat)
+├── popup.js          # Popup state handling and escape begging flow
+├── CONTRACT.md       # Internal message contract for background worker endpoints
+└── test-pleas.js     # Local unit safeguard suite and live Gemini plea/nutrition harness
 ```
 
 ### Internal Message API (`chrome.runtime.onMessage`)
@@ -85,7 +92,7 @@ Works on **Google Chrome**, **Floorp**, and other Chromium/compatible browsers:
 2. Open your browser and navigate to `chrome://extensions/`.
 3. Enable **Developer mode** in the top-right corner.
 4. Click **Load unpacked** and select the `attention-please-main` directory.
-5. *(Optional)* Configure your LLM API key in `ai-client.js` (or your environment/storage config).
+5. Copy `config.example.js` to `config.js` (gitignored) and paste your Gemini API key (never put an API key in `ai-client.js`). Without `config.js`, the extension runs safely in mock mode.
 6. Pin **Attention, please!** to your toolbar so you can access **Mystery Shelf** and **Beg for Freedom**.
 
 ---

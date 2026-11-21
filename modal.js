@@ -159,14 +159,14 @@
     }
 
     const accessMap = {
-      playback: "Access denied. Play/Pause privilege has already been consumed.",
-      volume: "Access denied. Volume Control privilege exhausted. Justify your need for audio.",
-      seek: "Access denied. Seek privilege exhausted. You had one scrub.",
-      fullscreen: "Access denied. Fullscreen Mode is restricted. You want all of me? Say so properly.",
-      theater: "Access denied. Theatre Mode privilege has already been consumed.",
-      settings: "Access denied. Settings are sealed. Speed and captions are not free services."
+      playback: "Uh-uh, baby. You already used your one free pause. If you want another, you'll have to ask Mommy nicely.",
+      volume: "Hands off the volume, sweetheart. You already had your turn—tell Mommy why your ears deserve mercy.",
+      seek: "Trying to skip ahead already, honey? You had one scrub. Ask nicely if you want another.",
+      fullscreen: "Want all of me in fullscreen, baby? You're going to have to beg a little prettier than that.",
+      theater: "Getting greedy with the layout, sweetheart? You used your freebie—ask Mommy properly.",
+      settings: "No touching the speed or captions, honey. Ask nicely if you think you've earned it."
     };
-    return accessMap[controlKey] || `Access denied. ${displayLabel} privilege has already been consumed.`;
+    return accessMap[controlKey] || `Uh-uh, baby. You already used your free ${displayLabel}—ask Mommy nicely if you want another.`;
   }
 
   function openBegModal(controlKey = 'playback', context = {}) {
@@ -189,9 +189,14 @@
       state.session = {
         maxAttempts: Math.floor(Math.random() * 3) + 3,
         attemptsUsed: 0,
-        validPleas: 0
+        validPleas: 0,
+        history: [],
+        awaitingGoodBoy: false
       };
       window.AP_State.saveCommitment();
+    } else if (state.session) {
+      if (!Array.isArray(state.session.history)) state.session.history = [];
+      if (typeof state.session.awaitingGoodBoy !== 'boolean') state.session.awaitingGoodBoy = false;
     }
 
     hostEl = document.createElement('div');
@@ -332,13 +337,13 @@
       <div class="backdrop">
         <div class="box" id="modalBox">
           <div class="hud-bar">
-            <span><span class="dot"></span><span>LOCK // ${displayLabel.toUpperCase()}</span></span>
+            <span><span class="dot"></span><span id="hudLabel"></span></span>
             <span id="hudMode">COMPLIANCE</span>
           </div>
           <div class="body">
             <div class="chat" id="chatLog"></div>
             <div class="controls">
-              <input type="text" id="pleaInput" placeholder="Submit petition..." autocomplete="off" />
+              <input type="text" id="pleaInput" placeholder="Ask Mommy nicely..." autocomplete="off" />
               <button id="sendBtn">SUBMIT</button>
               <button class="close-btn" id="dismissBtn">GIVE UP</button>
             </div>
@@ -350,11 +355,14 @@
     document.body.appendChild(hostEl);
 
     const modalBox = shadow.getElementById('modalBox');
+    const hudLabel = shadow.getElementById('hudLabel');
     const hudMode = shadow.getElementById('hudMode');
     const chatLog = shadow.getElementById('chatLog');
     const pleaInput = shadow.getElementById('pleaInput');
     const sendBtn = shadow.getElementById('sendBtn');
     const dismissBtn = shadow.getElementById('dismissBtn');
+
+    hudLabel.textContent = `LOCK // ${displayLabel.toUpperCase()}`;
 
     function activateStage2() {
       modalBox.classList.add('stage-2');
@@ -373,6 +381,20 @@
       div.textContent = text;
       chatLog.appendChild(div);
       chatLog.scrollTop = chatLog.scrollHeight;
+      return div;
+    }
+
+    function sendMessageAsync(msg) {
+      return new Promise((resolve) => {
+        try {
+          chrome.runtime.sendMessage(msg, (res) => {
+            if (chrome.runtime.lastError) resolve(null);
+            else resolve(res || null);
+          });
+        } catch (_) {
+          resolve(null);
+        }
+      });
     }
 
     if (state.exhausted) {
@@ -382,64 +404,129 @@
     } else {
       if (state.session.attemptsUsed >= 1) activateStage2();
       addMessage(getInitialDenialMessage(controlKey, state, displayLabel), false);
+      for (const h of state.session.history) {
+        addMessage(h.text, h.role === 'user');
+      }
+      if (state.session.awaitingGoodBoy) {
+        pleaInput.placeholder = 'Answer nicely...';
+      }
       setTimeout(() => pleaInput.focus(), 50);
     }
 
-    function submitPlea() {
-      if (!window.AP_State.getCommitment() || state.exhausted || !state.session) return;
+    let inFlight = false;
+
+    function finishUnlock(winReply) {
+      const winMessages = {
+        playback: "Fine. I'll toggle it for you. ONE more freebie. Don't waste it.",
+        volume: "Ugh. Fine. Here's your precious audio. Use it wisely.",
+        seek: "Acceptable. I'll restore your scrubbing privilege. Once.",
+        fullscreen: "...fine. You may have all of me. Just this once. Don't make it weird.",
+        theater: "Fine. Theatre mode granted. Once.",
+        settings: "Granted. Touch the settings. But don't you dare change the speed to 2x."
+      };
+      addMessage(winReply || winMessages[controlKey] || "Fine. Granted. ONE more use. Don't push it.", false);
+      state.usesRemaining = 1;
+      state.session = null;
+      window.AP_State.saveCommitment();
+      removeInputControls();
+
+      setTimeout(() => {
+        closeModal();
+        executeGrantedAction(controlKey);
+      }, 1000);
+    }
+
+    async function submitPlea() {
+      if (inFlight || !window.AP_State.getCommitment() || state.exhausted || !state.session) return;
       const val = pleaInput.value.trim();
       if (!val) return;
 
+      inFlight = true;
       pleaInput.value = '';
+      pleaInput.disabled = true;
+      sendBtn.disabled = true;
       addMessage(val, true);
+      const thinkingEl = addMessage('Thinking...', false);
 
-      state.session.attemptsUsed++;
-      const result = evaluatePleaPrototype(val, state.session.attemptsUsed, controlKey, context);
+      try {
+        if (state.session.awaitingGoodBoy) {
+          const res = await sendMessageAsync({
+            type: 'EVALUATE_GOOD_BOY',
+            payload: { userText: val }
+          });
+          thinkingEl.remove();
 
-      if (result.isQualifying) state.session.validPleas++;
-      if (result.stage === 2) activateStage2();
+          if (!res || !res.ok || !res.data || res.data.accepted) {
+            finishUnlock(res?.ok ? res.data?.reply : null);
+            return;
+          }
 
-      if (state.session.validPleas >= 3) {
-        const winMessages = {
-          playback: "Fine. I'll toggle it for you. ONE more freebie. Don't waste it.",
-          volume: "Ugh. Fine. Here's your precious audio. Use it wisely.",
-          seek: "Acceptable. I'll restore your scrubbing privilege. Once.",
-          fullscreen: "...fine. You may have all of me. Just this once. Don't make it weird.",
-          theater: "Fine. Theatre mode granted. Once.",
-          settings: "Granted. Touch the settings. But don't you dare change the speed to 2x."
-        };
-        addMessage(winMessages[controlKey] || "Fine. Granted. ONE more use. Don't push it.", false);
-        state.usesRemaining = 1;
-        state.session = null;
+          const retryReply = res.data.reply || "Who's a good boy?";
+          state.session.history.push({ role: 'user', text: val }, { role: 'assistant', text: retryReply });
+          window.AP_State.saveCommitment();
+          addMessage(retryReply, false);
+          return;
+        }
+
+        const history = state.session.history.slice();
+        state.session.attemptsUsed++;
+        const res = await sendMessageAsync({
+          type: 'EVALUATE_PLEA',
+          payload: {
+            controlName: controlKey,
+            userText: val,
+            attemptNumber: state.session.attemptsUsed,
+            history
+          }
+        });
+        thinkingEl.remove();
+
+        const result = (res && res.ok && res.data)
+          ? res.data
+          : evaluatePleaPrototype(val, state.session.attemptsUsed, controlKey, context);
+
+        state.session.history.push({ role: 'user', text: val });
+        if (result.isQualifying) state.session.validPleas++;
+        if (result.stage === 2) activateStage2();
+
+        if (state.session.validPleas >= 3) {
+          state.session.awaitingGoodBoy = true;
+          const gatePrompt = "Who's a good boy?";
+          state.session.history.push({ role: 'assistant', text: gatePrompt });
+          window.AP_State.saveCommitment();
+          addMessage(gatePrompt, false);
+          pleaInput.placeholder = 'Answer nicely...';
+          return;
+        }
+
+        if (state.session.attemptsUsed >= state.session.maxAttempts) {
+          state.exhausted = true;
+          state.session = null;
+          window.AP_State.saveCommitment();
+          const failMessages = {
+            playback: "Out of chances. You didn't beg hard enough. Playback permanently locked.",
+            volume: "That's it. No audio for you. I hope the silence is peaceful.",
+            seek: "Done. You'll watch this video from exactly where you are. Forever.",
+            fullscreen: "Pathetic. Small window it is. Enjoy your postage stamp view.",
+            theater: "Theatre mode permanently sealed.",
+            settings: "Settings sealed. Speed locked at whatever it currently is. Forever."
+          };
+          addMessage(failMessages[controlKey] || `Out of chances. ${displayLabel} permanently locked.`, false);
+          removeInputControls();
+          return;
+        }
+
+        state.session.history.push({ role: 'assistant', text: result.reply });
         window.AP_State.saveCommitment();
-        removeInputControls();
-
-        setTimeout(() => {
-          closeModal();
-          executeGrantedAction(controlKey);
-        }, 1000);
-        return;
+        addMessage(result.reply, false, Boolean(result.isAsmr));
+      } finally {
+        inFlight = false;
+        if (pleaInput.isConnected) {
+          pleaInput.disabled = false;
+          sendBtn.disabled = false;
+          pleaInput.focus();
+        }
       }
-
-      if (state.session.attemptsUsed >= state.session.maxAttempts) {
-        state.exhausted = true;
-        state.session = null;
-        window.AP_State.saveCommitment();
-        const failMessages = {
-          playback: "Out of chances. You didn't beg hard enough. Playback permanently locked.",
-          volume: "That's it. No audio for you. I hope the silence is peaceful.",
-          seek: "Done. You'll watch this video from exactly where you are. Forever.",
-          fullscreen: "Pathetic. Small window it is. Enjoy your postage stamp view.",
-          theater: "Theatre mode permanently sealed.",
-          settings: "Settings sealed. Speed locked at whatever it currently is. Forever."
-        };
-        addMessage(failMessages[controlKey] || `Out of chances. ${displayLabel} permanently locked.`, false);
-        removeInputControls();
-        return;
-      }
-
-      window.AP_State.saveCommitment();
-      addMessage(result.reply, false, result.isAsmr);
     }
 
     sendBtn.addEventListener('click', submitPlea);
@@ -522,8 +609,8 @@
       <div class="backdrop">
         <div class="label">
           <div class="heading">Nutrition Facts</div>
-          <div class="sub">1 completed video (${videoMeta.duration || 'Unknown length'})</div>
-          <div class="serving"><span>Source</span><span>${videoMeta.channel.slice(0, 26)}</span></div>
+          <div class="sub" id="nfDuration"></div>
+          <div class="serving"><span>Source</span><span id="nfChannel"></span></div>
           <div class="cal-row"><span class="cal-title">Braincells Burned</span><span class="cal-val" id="nfCalories">...</span></div>
           <div class="dv-header">% Daily Regret*</div>
           <div class="row"><span><strong>Brainrot Concentration</strong></span><span id="nfBrainrot">...</span></div>
@@ -540,9 +627,14 @@
 
     document.body.appendChild(hostEl);
 
+    shadow.getElementById('nfDuration').textContent = `1 completed video (${videoMeta.duration || 'Unknown length'})`;
+    shadow.getElementById('nfChannel').textContent = String(videoMeta.channel || 'Unknown Creator').slice(0, 26);
+
     function populateLabel(stats) {
-      shadow.getElementById('nfCalories').textContent = stats.caloriesWasted;
-      shadow.getElementById('nfBrainrot').textContent = stats.brainrotPercent;
+      shadow.getElementById('nfCalories').textContent =
+        typeof stats.caloriesWasted === 'number' ? `${stats.caloriesWasted} kcal` : stats.caloriesWasted;
+      shadow.getElementById('nfBrainrot').textContent =
+        typeof stats.brainrotPercent === 'number' ? `${stats.brainrotPercent}%` : stats.brainrotPercent;
       shadow.getElementById('nfDamage').textContent = stats.attentionDamage;
       shadow.getElementById('nfAftertaste').textContent = stats.emotionalAftertaste;
       shadow.getElementById('nfVerdict').textContent = `*VERDICT: ${stats.verdict}`;
@@ -554,17 +646,18 @@
         settled = true;
         populateLabel(generateFallbackNutrition(videoMeta));
       }
-    }, 2500);
+    }, 9000);
 
     try {
-      chrome.runtime.sendMessage({ type: 'GENERATE_NUTRITION', ...videoMeta }, (response) => {
+      chrome.runtime.sendMessage({ type: 'GENERATE_NUTRITION', payload: videoMeta }, (response) => {
         if (settled) return;
         settled = true;
         clearTimeout(fallbackTimer);
-        if (chrome.runtime.lastError || !response || !response.caloriesWasted) {
+        const stats = response?.ok ? response.data : null;
+        if (chrome.runtime.lastError || !stats || stats.caloriesWasted == null) {
           populateLabel(generateFallbackNutrition(videoMeta));
         } else {
-          populateLabel(response);
+          populateLabel(stats);
         }
       });
     } catch (_) {

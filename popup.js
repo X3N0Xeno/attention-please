@@ -48,6 +48,20 @@ document.addEventListener('DOMContentLoaded', () => {
     div.textContent = text;
     chatLog.appendChild(div);
     chatLog.scrollTop = chatLog.scrollHeight;
+    return div;
+  }
+
+  function sendMessageAsync(msg) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(msg, (res) => {
+          if (chrome.runtime.lastError) resolve(null);
+          else resolve(res || null);
+        });
+      } catch (_) {
+        resolve(null);
+      }
+    });
   }
 
   function renderUI() {
@@ -68,9 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
         freedomState.session = {
           maxAttempts: Math.floor(Math.random() * 3) + 3,
           attemptsUsed: 0,
-          validPleas: 0
+          validPleas: 0,
+          history: [],
+          awaitingGoodBoy: false
         };
         chrome.storage.local.set({ commitmentState: commitment });
+      } else if (freedomState.session) {
+        if (!Array.isArray(freedomState.session.history)) freedomState.session.history = [];
+        if (typeof freedomState.session.awaitingGoodBoy !== 'boolean') freedomState.session.awaitingGoodBoy = false;
       }
 
       chatLog.innerHTML = '';
@@ -86,6 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.classList.remove('stage-2');
         }
         addMessage("Trying to sneak out early? Beg for your freedom.", false);
+        for (const h of freedomState.session.history) {
+          addMessage(h.text, h.role === 'user');
+        }
+        pleaInput.placeholder = freedomState.session.awaitingGoodBoy
+          ? 'Answer nicely...'
+          : 'Beg to escape this video...';
         setTimeout(() => pleaInput.focus(), 50);
       }
     } else {
@@ -114,57 +139,118 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  function submitFreedomPlea() {
-    if (!commitment || !commitment.controls?.freedom) return;
+  let inFlight = false;
+
+  function finishFreedomUnlock(winReply) {
+    addMessage(winReply || "Fine, you're free to go. Run along now.", false);
+    inputRow.classList.add('hidden');
+    const releasedId = commitment.activeVideoId;
+
+    setTimeout(() => {
+      commitment = null;
+      chrome.storage.local.set(
+        {
+          commitmentState: null,
+          lastReleasedVideoId: releasedId
+        },
+        () => renderUI()
+      );
+    }, 950);
+  }
+
+  async function submitFreedomPlea() {
+    if (inFlight || !commitment || !commitment.controls?.freedom) return;
     const freedomState = commitment.controls.freedom;
     if (freedomState.exhausted || !freedomState.session) return;
 
     const val = pleaInput.value.trim();
     if (!val) return;
 
+    inFlight = true;
     pleaInput.value = '';
+    pleaInput.disabled = true;
+    sendBtn.disabled = true;
     addMessage(val, true);
+    const thinkingEl = addMessage('Thinking...', false);
 
-    freedomState.session.attemptsUsed++;
-    const result = evaluateFreedomPleaPrototype(val, freedomState.session.attemptsUsed);
+    try {
+      if (freedomState.session.awaitingGoodBoy) {
+        const res = await sendMessageAsync({
+          type: 'EVALUATE_GOOD_BOY',
+          payload: { userText: val }
+        });
+        thinkingEl.remove();
 
-    if (result.isQualifying) {
-      freedomState.session.validPleas++;
-    }
+        if (!res || !res.ok || !res.data || res.data.accepted) {
+          finishFreedomUnlock(res?.ok ? res.data?.reply : null);
+          return;
+        }
 
-    if (result.stage === 2) {
-      document.body.classList.add('stage-2');
-    }
+        const retryReply = res.data.reply || "Who's a good boy?";
+        freedomState.session.history.push({ role: 'user', text: val }, { role: 'assistant', text: retryReply });
+        chrome.storage.local.set({ commitmentState: commitment });
+        addMessage(retryReply, false);
+        return;
+      }
 
-    if (freedomState.session.validPleas >= 3) {
-      addMessage("Fine, you're free to go. Run along now.", false);
-      inputRow.classList.add('hidden');
-      const releasedId = commitment.activeVideoId;
-
-      setTimeout(() => {
-        commitment = null;
-        chrome.storage.local.set(
-          {
-            commitmentState: null,
-            lastReleasedVideoId: releasedId
-          },
-          () => renderUI()
-        );
-      }, 950);
-      return;
-    }
-
-    if (freedomState.session.attemptsUsed >= freedomState.session.maxAttempts) {
-      freedomState.exhausted = true;
-      freedomState.session = null;
+      const history = freedomState.session.history.slice();
+      freedomState.session.attemptsUsed++;
+      freedomState.session.history.push({ role: 'user', text: val });
       chrome.storage.local.set({ commitmentState: commitment });
-      addMessage("Out of chances. You're stuck watching until the very end.", false);
-      inputRow.classList.add('hidden');
-      return;
-    }
 
-    chrome.storage.local.set({ commitmentState: commitment });
-    addMessage(result.reply, false);
+      const res = await sendMessageAsync({
+        type: 'EVALUATE_PLEA',
+        payload: {
+          controlName: 'freedom',
+          userText: val,
+          attemptNumber: freedomState.session.attemptsUsed,
+          history
+        }
+      });
+      thinkingEl.remove();
+
+      const result = (res && res.ok && res.data)
+        ? res.data
+        : evaluateFreedomPleaPrototype(val, freedomState.session.attemptsUsed);
+
+      if (result.isQualifying) {
+        freedomState.session.validPleas++;
+      }
+
+      if (result.stage === 2) {
+        document.body.classList.add('stage-2');
+      }
+
+      if (freedomState.session.validPleas >= 3) {
+        freedomState.session.awaitingGoodBoy = true;
+        const gatePrompt = "Who's a good boy?";
+        freedomState.session.history.push({ role: 'assistant', text: gatePrompt });
+        chrome.storage.local.set({ commitmentState: commitment });
+        addMessage(gatePrompt, false);
+        pleaInput.placeholder = 'Answer nicely...';
+        return;
+      }
+
+      if (freedomState.session.attemptsUsed >= freedomState.session.maxAttempts) {
+        freedomState.exhausted = true;
+        freedomState.session = null;
+        chrome.storage.local.set({ commitmentState: commitment });
+        addMessage("Out of chances. You're stuck watching until the very end.", false);
+        inputRow.classList.add('hidden');
+        return;
+      }
+
+      freedomState.session.history.push({ role: 'assistant', text: result.reply });
+      chrome.storage.local.set({ commitmentState: commitment });
+      addMessage(result.reply, false);
+    } finally {
+      inFlight = false;
+      if (!inputRow.classList.contains('hidden')) {
+        pleaInput.disabled = false;
+        sendBtn.disabled = false;
+        pleaInput.focus();
+      }
+    }
   }
 
   sendBtn.addEventListener('click', submitFreedomPlea);
