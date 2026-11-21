@@ -115,9 +115,3 @@ To test local changes, reload the extension at `chrome://extensions/` and refres
 ## Team
 
 Created by **Hey you know what's a good weekend side quest? I think I have an IDE.A. Say that again? IDE.A**.
-
----
-
-## License
-
-This project is licensed under the **MIT License**.
