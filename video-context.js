@@ -14,6 +14,11 @@ async function getVideoContext() {
     return "";
   };
 
+  // If called at document_start, wait for DOM interactive/complete before polling selectors.
+  if (document.readyState === "loading") {
+    await new Promise((r) => document.addEventListener("DOMContentLoaded", r, { once: true }));
+  }
+
   // YouTube is a SPA: after a click, the DOM/meta can still belong to the PREVIOUS page.
   // Wait until the watch element reports the same video id as the URL (skip on /shorts/).
   const url = new URL(location.href);
@@ -22,10 +27,10 @@ async function getVideoContext() {
     vid ||
     (url.pathname.startsWith("/shorts/") ? url.pathname.split("/shorts/")[1]?.split("/")[0] || "" : "");
   if (vid) {
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) {
       const flexy = document.querySelector("ytd-watch-flexy");
       const idOk = flexy && flexy.getAttribute("video-id") === vid;
-      if (idOk && pick(["h1.ytd-watch-metadata"])) break;
+      if (idOk && pick(["h1.ytd-watch-metadata yt-formatted-string", "h1.ytd-watch-metadata"])) break;
       await sleep(300);
     }
   }
@@ -36,11 +41,13 @@ async function getVideoContext() {
     .map((c) => c.textContent.trim().slice(0, 200))
     .filter(Boolean);
 
+  const docTitle = document.title.replace(/^\(\d+\)\s*/, "").replace(/\s*-\s*YouTube\s*$/i, "").trim();
+
   return {
     videoId,
     title:
       pick(["h1.ytd-watch-metadata yt-formatted-string", "h1.ytd-watch-metadata"]) ||
-      document.title.replace(/\s*-\s*YouTube\s*$/, "") ||
+      (docTitle && docTitle.toLowerCase() !== "youtube" ? docTitle : "") ||
       pick(["meta[name='title']"], "content"),
     channel: pick(["#owner #channel-name a", "ytd-channel-name a"]) ||
              pick(["link[itemprop='name']"], "content"),
