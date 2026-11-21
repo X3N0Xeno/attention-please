@@ -44,13 +44,8 @@
     return window.__apContent || null;
   }
 
-  function getVideoIdFromUrl(urlStr) {
-    try {
-      const u = new URL(urlStr, location.origin);
-      if (u.pathname === '/watch') return u.searchParams.get('v');
-      if (u.pathname.startsWith('/shorts/')) return u.pathname.split('/shorts/')[1]?.split('/')[0] || null;
-    } catch (_) {}
-    return null;
+  function getCurrentVideoId() {
+    return window.AP_State?.getVideoIdFromUrl(location.href) || null;
   }
 
   function isEventInsideModal(e) {
@@ -80,7 +75,7 @@
     if (!bridge) return;
 
     const commitment = bridge.getCommitment();
-    if (!commitment || !getVideoIdFromUrl(location.href)) return;
+    if (!commitment || !getCurrentVideoId()) return;
 
     const def = CONTROL_DEFS[controlKey] || {
       label: controlKey,
@@ -143,7 +138,7 @@
         if (!controlKey) return;
 
         const commitment = bridge.getCommitment();
-        if (!commitment || !getVideoIdFromUrl(location.href)) return;
+        if (!commitment || !getCurrentVideoId()) return;
 
         const state = commitment.controls[controlKey];
         const isLocked = !state || state.usesRemaining <= 0;
@@ -169,14 +164,14 @@
       const bridge = getBridge();
       if (!bridge) return;
       const commitment = bridge.getCommitment();
-      if (!commitment || !getVideoIdFromUrl(location.href)) return;
+      if (!commitment || !getCurrentVideoId()) return;
 
       if (e.target instanceof Element && e.target.closest('video, #movie_player')) {
         const state = commitment.controls.fullscreen;
         if (!state || state.usesRemaining <= 0) {
           bridge.blockEvent(e);
-          handleControlAction('fullscreen', e, false);
         }
+        handleControlAction('fullscreen', e, false);
       }
     },
     true
@@ -191,14 +186,14 @@
       const bridge = getBridge();
       if (!bridge) return;
       const commitment = bridge.getCommitment();
-      if (!commitment || !getVideoIdFromUrl(location.href)) return;
+      if (!commitment || !getCurrentVideoId()) return;
 
       if (e.target instanceof Element && e.target.closest('#movie_player, video, .ytp-volume-area')) {
         const state = commitment.controls.volume;
         if (!state || state.usesRemaining <= 0) {
           bridge.blockEvent(e);
-          handleControlAction('volume', e, false);
         }
+        handleControlAction('volume', e, false);
       }
     },
     { capture: true, passive: false }
@@ -222,7 +217,7 @@
         }
 
         const commitment = bridge.getCommitment();
-        if (!commitment || !getVideoIdFromUrl(location.href)) return;
+        if (!commitment || !getCurrentVideoId()) return;
 
         const key = e.key.toLowerCase();
         const code = e.code;
@@ -340,6 +335,9 @@
   }
 
   const adObserver = new MutationObserver(() => {
+    const bridge = getBridge();
+    if (!bridge || !bridge.getCommitment()) return;
+
     for (const sel of AD_SKIP_SELECTORS) {
       const btn = document.querySelector(sel);
       if (btn && !btn.dataset.apAdBound) {
