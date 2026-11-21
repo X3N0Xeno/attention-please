@@ -17,8 +17,14 @@
     {
       "matches": ["*://*.youtube.com/*"],
       "css": ["styles.css"],
-      "js": ["content.js", "lockouts.js"],
-      "run_at": "document_idle"
+      "js": [
+        "state.js",
+        "modal.js",
+        "feed.js",
+        "content.js",
+        "lockouts.js"
+      ],
+      "run_at": "document_start"
     }
   ]
 }
