@@ -16,7 +16,11 @@ async function getVideoContext() {
 
   // YouTube is a SPA: after a click, the DOM/meta can still belong to the PREVIOUS page.
   // Wait until the watch element reports the same video id as the URL (skip on /shorts/).
-  const vid = new URL(location.href).searchParams.get("v"); // null on /shorts/
+  const url = new URL(location.href);
+  const vid = url.searchParams.get("v"); // null on /shorts/
+  const videoId =
+    vid ||
+    (url.pathname.startsWith("/shorts/") ? url.pathname.split("/shorts/")[1]?.split("/")[0] || "" : "");
   if (vid) {
     for (let i = 0; i < 15; i++) {
       const flexy = document.querySelector("ytd-watch-flexy");
@@ -33,6 +37,7 @@ async function getVideoContext() {
     .filter(Boolean);
 
   return {
+    videoId,
     title:
       pick(["h1.ytd-watch-metadata yt-formatted-string", "h1.ytd-watch-metadata"]) ||
       document.title.replace(/\s*-\s*YouTube\s*$/, "") ||

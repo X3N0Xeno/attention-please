@@ -40,12 +40,13 @@ Judges a single begging plea and returns an in-character reply. The AI **never**
 - **Request `payload`:**
   ```js
   {
-    controlName: "playback" | "escape" | "volume" | "seek" | "fullscreen" | string,
+    controlName: string,       // e.g. "playback", "escape", or any locked control name from Laptop 3
     userText: string,          // current plea
     attemptNumber: number,     // 1-based; 1 -> stage 1 (Mommy - initial), 2+ -> stage 2 (Mommy - escalated)
     history: [                 // previous turns only (current userText is deduped if included)
       { role: "user" | "assistant", text: string }
-    ]
+    ],
+    videoTitle?: string        // optional; AI teases the vibe/genre without quoting the title verbatim (Mystery Shelf safe)
   }
   ```
 - **Response `data`:**
@@ -90,6 +91,7 @@ Generates satirical FDA-style Nutrition Facts for a finished video.
 - **Request `payload`:** object returned by `await getVideoContext()` (from `video-context.js`, loaded before `content.js` in `manifest.json`):
   ```js
   {
+    videoId: string,     // YouTube video ID from ?v= or /shorts/<id> (empty string if unavailable)
     title: string,
     channel: string,
     description: string,
